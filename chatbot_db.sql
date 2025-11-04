@@ -1,0 +1,39 @@
+﻿USE chatbot_db;
+DROP TABLE IF EXISTS messages; 
+CREATE TABLE messages (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    senderId INT NOT NULL,
+    recipientId INT NOT NULL,
+    content TEXT NOT NULL,
+    createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (senderId) REFERENCES users(id),
+    FOREIGN KEY (recipientId) REFERENCES users(id)
+);
+DROP TABLE IF EXISTS groups;
+CREATE TABLE groups (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    creatorId INT NOT NULL,
+    createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (creatorId) REFERENCES users(id)
+);
+DROP TABLE IF EXISTS group_members;
+CREATE TABLE group_members (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    groupId INT NOT NULL,
+    userId INT NOT NULL,
+    joinedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (groupId) REFERENCES groups(id) ON DELETE CASCADE,
+    FOREIGN KEY (userId) REFERENCES users(id) ON DELETE CASCADE,
+    UNIQUE KEY (groupId, userId)
+);
+DROP TABLE IF EXISTS group_messages;
+CREATE TABLE group_messages (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    groupId INT NOT NULL,
+    senderId INT NOT NULL,
+    content TEXT NOT NULL,
+    createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (groupId) REFERENCES groups(id) ON DELETE CASCADE,
+    FOREIGN KEY (senderId) REFERENCES users(id)
+);
