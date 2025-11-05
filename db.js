@@ -63,6 +63,7 @@ const pool = mysql.createPool({
   user: 'root',
   password: '', // <-- Nhập mật khẩu CỦA BẠN (nếu có)
   database: 'chatbot_db',
+  port: 3307, // ⚠️ thêm dòng này nếu phpMyAdmin báo là Server port: 3307
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0,
