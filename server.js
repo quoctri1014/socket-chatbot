@@ -178,7 +178,9 @@ async function handleAIChat(userMessage, myUserId, myUsername) {
     console.error("Lỗi khi lấy lịch sử chat:", err);
   }
 
-  // 
+  // 3. Thêm tin nhắn mới của người dùng
+  messages.push({ role: 'user', content: userMessage });
+
   try {
     // 4. GỌI OPENAI LẦN 1 (Kiểm tra xem AI có cần dùng Tool không)
     const response = await openai.chat.completions.create({
