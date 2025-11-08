@@ -29,6 +29,36 @@ const io = new Server(server, { /* options */ });
 
 // in-memory online users map: { userId: { socketId, username } }
 const onlineUsers = {};
+
+// (SỬA LỖI) Định nghĩa lại hàm helper ở đây, ngay đầu tệp
+async function broadcastUpdatedUserList() {
+  try {
+    // Lấy tất cả user từ DB, bao gồm cả user AI (id=0)
+    const [allUsersFromDB] = await db.query('SELECT id, username FROM users');
+
+    // Lọc ra ai đang online, ai offline
+    const userList = allUsersFromDB.map(user => {
+      const isOnline = !!onlineUsers[user.id]; // Kiểm tra xem user có trong onlineUsers không
+      
+      // Đặc biệt: AI (id=0) luôn luôn online
+      if (user.id === 0) {
+        return { userId: 0, username: 'Trợ lý AI', online: true };
+      }
+
+      return {
+        userId: user.id,
+        username: user.username,
+        online: isOnline
+      };
+    });
+
+    // Gửi danh sách đã xử lý tới tất cả client
+    io.emit('userList', userList); 
+  } catch (err) {
+    console.error('Lỗi khi broadcast danh sách user:', err);
+  }
+}
+
 // -----------------------------------------------------------------
 // --- (BẮT ĐẦU) THÊM TOÀN BỘ KHỐI CODE NÀY CHO AI THÔNG MINH ---
 // -----------------------------------------------------------------
@@ -278,40 +308,25 @@ async function handleAIChat(userMessage, myUserId, myUsername) {
     socket.emit('error', 'Trợ lý AI đang gặp lỗi, vui lòng thử lại sau.');
   }
 }
+
+// (SỬA LỖI) Thêm lại các middleware của Express và hàm xác thực
 app.use(express.static('public'));
 app.use(express.json());
 
-// --- auth middleware for REST APIs (unchanged) ---
+// Middleware để xác thực token cho các API yêu cầu đăng nhập
 const authenticateToken = (req, res, next) => {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1];
-  if (token == null) return res.sendStatus(401);
+  if (token == null) return res.sendStatus(401); // Không có token
+
   jwt.verify(token, JWT_SECRET, (err, user) => {
-    if (err) return res.sendStatus(403);
-    req.user = user;
-    next();
+    if (err) return res.sendStatus(403); // Token không hợp lệ hoặc hết hạn
+    req.user = user; // Gắn thông tin user vào request
+    next(); // Chuyển đến handler tiếp theo
   });
 };
 
-// --- REST endpoints (register/login, groups) ---
-// (Giữ nguyên toàn bộ code API của bạn)
-app.post('/api/register', async (req, res) => {
-  try {
-    const { username, password } = req.body;
-    if (!username || !password) {
-      return res.status(400).json({ message: 'Vui long nhap ten va mat khau.' });
-    }
-    const passwordHash = await bcrypt.hash(password, 10);
-    await db.query('INSERT INTO users (username, passwordHash) VALUES (?, ?)', [username, passwordHash]);
-    res.status(201).json({ message: 'Dang ky thanh cong!' });
-  } catch (error) {
-    if (error.code === 'ER_DUP_ENTRY') {
-      return res.status(400).json({ message: 'Ten dang nhap da ton tai.' });
-    }
-    console.error(error);
-    res.status(500).json({ message: 'Loi may chu.' });
-  }
-});
+// --- Các API Endpoints ---
 
 app.post('/api/login', async (req, res) => {
   try {
