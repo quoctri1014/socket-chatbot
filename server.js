@@ -36,13 +36,13 @@ async function broadcastUpdatedUserList() {
     // Lấy tất cả user từ DB, bao gồm cả user AI (id=0)
     const [allUsersFromDB] = await db.query('SELECT id, username FROM users');
 
-    // Lọc ra ai đang online, ai offline
+    // Lọc ra ai đang online, ai offline từ danh sách người dùng THỰC
     const userList = allUsersFromDB.map(user => {
       const isOnline = !!onlineUsers[user.id]; // Kiểm tra xem user có trong onlineUsers không
       
-      // Đặc biệt: AI (id=0) luôn luôn online
+      // (SỬA LỖI) Bỏ qua user AI (id=0) nếu nó có trong DB, vì ta sẽ thêm nó thủ công
       if (user.id === 0) {
-        return { userId: 0, username: 'Trợ lý AI', online: true };
+        return null; 
       }
 
       return {
@@ -50,7 +50,10 @@ async function broadcastUpdatedUserList() {
         username: user.username,
         online: isOnline
       };
-    });
+    }).filter(user => user !== null); // Loại bỏ các giá trị null
+
+    // (SỬA LỖI) Luôn thêm Trợ lý AI vào đầu danh sách
+    userList.unshift({ userId: 0, username: 'Trợ lý AI', online: true });
 
     // Gửi danh sách đã xử lý tới tất cả client
     io.emit('userList', userList); 
@@ -209,7 +212,7 @@ async function handleAIChat(userMessage, myUserId, myUsername) {
       `SELECT content, senderId FROM messages 
        WHERE ((senderId = ? AND recipientId = 0) OR (senderId = 0 AND recipientId = ?))
        ORDER BY createdAt DESC LIMIT 9`, // SỬA LỖI: Chỉ lấy 9 tin nhắn cũ nhất
-      [myUserId, myUserId]
+      [myUserId, myUserId] // SỬA LỖI: Phải là [myUserId, myUserId] để khớp với 2 dấu ?
     );
     // Thêm lịch sử vào mảng (theo thứ tự từ cũ đến mới)
     for (const msg of history.reverse()) {
@@ -461,6 +464,25 @@ io.on('connection', async (socket) => {
       console.error(`Lỗi khi tải dữ liệu cho user ${myUserId}:`, err);
     }
   });
+
+  // (MỚI) Sự kiện chuyên biệt để tải lịch sử chat với AI
+  socket.on('loadAIHistory', async () => {
+    try {
+      const [messages] = await db.query(
+        `SELECT senderId, content, createdAt
+         FROM messages
+         WHERE (senderId = ? AND recipientId = 0) OR (senderId = 0 AND recipientId = ?)
+         ORDER BY createdAt ASC`,
+        [myUserId, myUserId]
+      );
+      // Gửi lại sự kiện privateHistory để client có thể tái sử dụng logic render
+      // nhưng với dữ liệu chỉ của AI
+      socket.emit('privateHistory', { recipientId: 0, messages });
+    } catch (err) {
+      console.error(`Lỗi khi tải lịch sử AI cho user ${myUserId}:`, err);
+    }
+  });
+
 
   // (MỚI) Xử lý sự kiện chat với AI chuyên biệt
   socket.on('chatWithAI', async ({ content }) => {

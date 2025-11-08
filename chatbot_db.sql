@@ -8,6 +8,11 @@ CREATE TABLE users (
   createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- (SỬA LỖI) Thêm một user đặc biệt cho AI với ID = 0
+-- Điều này là BẮT BUỘC để ràng buộc khóa ngoại (FOREIGN KEY) hoạt động
+-- Chạy lệnh này MỘT LẦN DUY NHẤT sau khi tạo bảng users
+INSERT INTO users (id, username, passwordHash) VALUES (0, 'Trợ lý AI', 'no_password_needed') ON DUPLICATE KEY UPDATE username='Trợ lý AI';
+
 
 -- 1. Bảng tin nhắn 1-1
 DROP TABLE IF EXISTS messages; 

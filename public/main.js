@@ -147,10 +147,6 @@ if (path.endsWith('/chat.html')) {
         }
       });
 
-      // (Cập nhật) Luôn tải danh sách nhóm khi click vào tab nhóm
-      if (tabName === 'groups') {
-         window.socket.emit('loadGroups');
-      }
     });
   });
 
@@ -291,12 +287,6 @@ if (path.endsWith('/chat.html')) {
     });
 
     users.forEach(user => {
-      // Bỏ qua chính mình (Nhưng AI (id=0) sẽ không bị bỏ qua)
-      if (user.userId === window.myUserId) {
-        window.allUsersCache[user.userId] = user; // Vẫn thêm vào cache
-        return;
-      }
-      
       window.allUsersCache[user.userId] = user; // Thêm vào cache
       
       const userItem = document.createElement('div');
@@ -338,8 +328,12 @@ if (path.endsWith('/chat.html')) {
         };
         window.activateChat(newContext);
         
-        // Yêu cầu lịch sử chat 1-1 (bao gồm cả AI)
-        window.socket.emit('loadPrivateHistory', { recipientId: user.userId });
+        // (SỬA) Phân biệt rạch ròi việc tải lịch sử
+        if (user.userId === 0) {
+          window.socket.emit('loadAIHistory'); // Sự kiện mới cho AI
+        } else {
+          window.socket.emit('loadPrivateHistory', { recipientId: user.userId }); // Sự kiện cũ cho người dùng
+        }
       };
 
       userListDiv.appendChild(userItem);
@@ -351,11 +345,13 @@ if (path.endsWith('/chat.html')) {
         if (activeUserItem) activeUserItem.classList.add('active');
     }
   });
-    window.socket.on('groupList', (groups) => {
-      console.log('Đã nhận danh sách nhóm:', groups);
-      window.allGroupsCache = groups; // Lưu vào cache
-      window.renderGroupListFromCache(); // Gọi hàm render (từ group-chat.js)
-    });
+
+  // 3. Nhận danh sách NHÓM
+  window.socket.on('groupList', (groups) => {
+    window.allGroupsCache = groups; // Lưu vào cache
+    window.renderGroupListFromCache(); // Gọi hàm render (từ group-chat.js)
+  });
+
   // 3. Nhận lịch sử chat 1-1 (hoạt động cho cả AI)
   window.socket.on('privateHistory', ({ recipientId, messages }) => {
     // Chỉ hiển thị nếu đang chat với đúng người (hoặc AI)
@@ -460,6 +456,7 @@ window.socket.on('newGroupMessage', (msg) => {
     }
     
     messageInput.value = '';
+    messageInput.focus(); // (CẢI TIẾN) Tự động focus lại vào ô chat
   });
 
   // 8. Logic tìm kiếm (Đơn giản) - ĐÃ CẬP NHẬT
