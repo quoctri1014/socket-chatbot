@@ -469,6 +469,15 @@ io.on('connection', async (socket) => {
     }
   });
 
+  // (MỚI) Xử lý sự kiện chat với AI chuyên biệt
+  socket.on('chatWithAI', async ({ content }) => {
+    // Tái sử dụng hàm handleAIChat đã có
+    // Điều này giúp client có một sự kiện rõ ràng hơn khi muốn nói chuyện với AI
+    if (content) {
+      await handleAIChat(content, myUserId, myUsername);
+    }
+  });
+
 
   // privateMessage (Giữ nguyên tính năng AI và chat 1-1 của bạn)
   socket.on('privateMessage', async (data) => {
@@ -567,9 +576,29 @@ io.on('connection', async (socket) => {
 
   // --- khi user ngắt kết nối (Giữ nguyên) ---
   socket.on('disconnect', () => {
-    console.log(`User ${myUsername} (ID: ${myUserId}) disconnected.`);
-    delete onlineUsers[myUserId];
-    io.emit('userOffline', { userId: myUserId });
+    (async () => { // Sử dụng hàm async để có thể query DB
+      console.log(`User ${myUsername} (ID: ${myUserId}) disconnected.`);
+      delete onlineUsers[myUserId];
+
+      // THAY ĐỔI: Thay vì emit 'userOffline', chúng ta sẽ tính toán và emit lại 'userList'
+      try {
+        const [allUsersFromDB] = await db.query('SELECT id, username FROM users');
+        const updatedUserList = allUsersFromDB.map(user => {
+          const isOnline = !!onlineUsers[user.id];
+          if (user.id === 0) {
+            return { userId: 0, username: 'Trợ lý AI', online: true };
+          }
+          return {
+            userId: user.id,
+            username: user.username,
+            online: isOnline
+          };
+        });
+        io.emit('userList', updatedUserList); // Gửi lại danh sách đã cập nhật cho mọi người
+      } catch (err) {
+        console.error('Lỗi khi cập nhật danh sách user sau khi disconnect:', err);
+      }
+    })();
   });
 }); // <-- đóng ngoặc cho io.on('connection', ...)
 

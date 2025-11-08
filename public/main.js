@@ -440,12 +440,19 @@ window.socket.on('newGroupMessage', (msg) => {
     }, 'user');
 
     // Gửi đi theo đúng context
-    if (context.type === 'user') {
-      window.socket.emit('privateMessage', {
-        recipientId: context.id, // Sẽ là 0 nếu gửi cho AI
-        content: msg
-      });
-    } else if (context.type === 'group') {
+    if (context.type === 'user') { // Nếu là chat 1-1
+      // Phân biệt giữa chat với AI và người dùng thường
+      if (context.id === 0) {
+        // Gửi sự kiện chuyên biệt cho AI
+        window.socket.emit('chatWithAI', { content: msg });
+      } else {
+        // Gửi tin nhắn riêng cho người dùng khác
+        window.socket.emit('privateMessage', {
+          recipientId: context.id,
+          content: msg
+        });
+      }
+    } else if (context.type === 'group') { // Nếu là chat nhóm
       window.socket.emit('groupMessage', {
         groupId: context.id,
         content: msg
