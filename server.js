@@ -144,6 +144,20 @@ async function handleAIChat(userMessage, myUserId, myUsername) {
   const socket = onlineUsers[myUserId] ? io.sockets.sockets.get(onlineUsers[myUserId].socketId) : null;
   if (!socket) return; // Thoát nếu user không online
 
+  // (SỬA LỖI) Bước 0: Lưu tin nhắn của người dùng vào DB NGAY LẬP TỨC
+  // Điều này đảm bảo cuộc hội thoại được ghi lại đầy đủ.
+  try {
+    await db.query(
+      'INSERT INTO messages (senderId, recipientId, content) VALUES (?, ?, ?)',
+      [myUserId, 0, userMessage] // senderId = user, recipientId = 0 (AI)
+    );
+  } catch (dbError) {
+    console.error("Lỗi khi lưu tin nhắn của người dùng vào DB:", dbError);
+    // Có thể thông báo lỗi cho người dùng nếu cần
+    socket.emit('error', 'Không thể gửi tin nhắn của bạn lúc này.');
+    return; // Dừng thực thi nếu không lưu được
+  }
+
   // 1. Xây dựng mảng tin nhắn (với System Prompt mới)
   const messages = [
     { 
@@ -163,8 +177,8 @@ async function handleAIChat(userMessage, myUserId, myUsername) {
   try {
     const [history] = await db.query(
       `SELECT content, senderId FROM messages 
-       WHERE (senderId = ? AND recipientId = 0) OR (senderId = 0 AND recipientId = ?)
-       ORDER BY createdAt DESC LIMIT 10`, 
+       WHERE ((senderId = ? AND recipientId = 0) OR (senderId = 0 AND recipientId = ?))
+       ORDER BY createdAt DESC LIMIT 9`, // SỬA LỖI: Chỉ lấy 9 tin nhắn cũ nhất
       [myUserId, myUserId]
     );
     // Thêm lịch sử vào mảng (theo thứ tự từ cũ đến mới)
@@ -381,44 +395,8 @@ io.on('connection', async (socket) => {
   // welcome (Giữ nguyên)
   socket.emit('welcome', { userId: myUserId, username: myUsername });
 
-  // prepare user lists (Giữ nguyên)
-  const userListForClient = Object.keys(onlineUsers).map(uid => ({
-    userId: parseInt(uid),
-    username: onlineUsers[uid].username,
-    online: true
-  }));
-
-  const ids = Object.keys(onlineUsers).length > 0 ? Object.keys(onlineUsers) : [0];
-  try {
-        // Lấy tất cả user từ DB, BAO GỒM CẢ user AI (id=0)
-        const [allUsersFromDB] = await db.query('SELECT id, username FROM users');
-
-        // Lọc ra ai đang online, ai offline
-        const userList = allUsersFromDB.map(user => {
-            const isOnline = !!onlineUsers[user.id]; // Kiểm tra xem user có trong onlineUsers không
-            
-            // Đặc biệt: AI (id=0) luôn luôn online
-            if (user.id === 0) {
-                return {
-                    userId: 0,
-                    username: 'Trợ lý AI', // Tên này lấy từ DB
-                    online: true
-                };
-            }
-
-            return {
-                userId: user.id,
-                username: user.username,
-                online: isOnline
-            };
-        });
-
-        // Gửi danh sách đã xử lý
-        io.emit('userList', userList);
-        
-    } catch (err) {
-        console.error('user list error', err);
-    }
+  // Gửi danh sách người dùng đã cập nhật cho mọi người khi có người mới vào
+  await broadcastUpdatedUserList();
 
   // ===================================
   // === BẮT ĐẦU THAY ĐỔI (DI CHUYỂN) ===
@@ -482,15 +460,10 @@ io.on('connection', async (socket) => {
   // privateMessage (Giữ nguyên tính năng AI và chat 1-1 của bạn)
   socket.on('privateMessage', async (data) => {
     const { recipientId, content } = data;
-    const senderId = myUserId;
-
-    // --- Nếu nhắn cho AI (Giữ nguyên) ---
-    if (recipientId === 0) {
-      await handleAIChat(content, senderId, myUsername);
-      return; 
-    }
 
     // --- Nếu nhắn giữa người dùng với nhau (Giữ nguyên) ---
+    // (ĐÃ XÓA) Logic xử lý AI đã được chuyển hoàn toàn sang sự kiện 'chatWithAI'
+    const senderId = myUserId;
     try {
       const [result] = await db.query(
         'INSERT INTO messages (senderId, recipientId, content) VALUES (?, ?, ?)',
@@ -576,29 +549,22 @@ io.on('connection', async (socket) => {
 
   // --- khi user ngắt kết nối (Giữ nguyên) ---
   socket.on('disconnect', () => {
-    (async () => { // Sử dụng hàm async để có thể query DB
-      console.log(`User ${myUsername} (ID: ${myUserId}) disconnected.`);
-      delete onlineUsers[myUserId];
-
-      // THAY ĐỔI: Thay vì emit 'userOffline', chúng ta sẽ tính toán và emit lại 'userList'
+    // Bọc trong một hàm async để có thể dùng await
+    const handleDisconnect = async () => {
       try {
-        const [allUsersFromDB] = await db.query('SELECT id, username FROM users');
-        const updatedUserList = allUsersFromDB.map(user => {
-          const isOnline = !!onlineUsers[user.id];
-          if (user.id === 0) {
-            return { userId: 0, username: 'Trợ lý AI', online: true };
-          }
-          return {
-            userId: user.id,
-            username: user.username,
-            online: isOnline
-          };
-        });
-        io.emit('userList', updatedUserList); // Gửi lại danh sách đã cập nhật cho mọi người
+        console.log(`User ${myUsername} (ID: ${myUserId}) disconnected.`);
+        delete onlineUsers[myUserId];
+
+        await broadcastUpdatedUserList(); // Gọi hàm helper để gửi lại danh sách user
       } catch (err) {
-        console.error('Lỗi khi cập nhật danh sách user sau khi disconnect:', err);
+        // (CẢI TIẾN) Nếu CSDL lỗi khi có người ngắt kết nối, chỉ ghi log chứ không làm sập server
+        console.error('Lỗi CSDL khi cập nhật danh sách user sau khi disconnect:', err.message);
+        // Trong trường hợp này, chúng ta không gửi gì cho client để tránh gây lỗi giao diện.
+        // Trạng thái online/offline sẽ được đồng bộ lại ở lần kết nối/ngắt kết nối tiếp theo.
       }
-    })();
+    };
+
+    handleDisconnect();
   });
 }); // <-- đóng ngoặc cho io.on('connection', ...)
 
