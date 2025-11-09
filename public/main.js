@@ -89,43 +89,7 @@ if (path.endsWith('/chat.html')) {
   const themeToggle = document.getElementById('theme-toggle');
   const body = document.body;
 
-  // --- LOGIC CHUNG (TAB, THEME, LOGOUT) ---
-
-    messageInput.addEventListener('keydown', (e) => {
-        // 1. Kiểm tra xem phím nhấn có phải là 'Enter' VÀ không giữ phím 'Shift'
-        if (e.key === 'Enter' && !e.shiftKey) {
-          // 2. Ngăn hành vi mặc định (là xuống dòng)
-          e.preventDefault();
-          
-          // 3. Kích hoạt sự kiện submit của form
-          // (Cách này giống hệt như khi bạn bấm nút "Gửi")
-          chatForm.requestSubmit(); 
-        }
-      });  
-
-  // 1. Logic Theme (Sáng/Tối)
-  function applySavedTheme() {
-    const savedTheme = localStorage.getItem('theme') || 'light';
-    body.dataset.theme = savedTheme;
-    themeToggle.textContent = savedTheme === 'light' ? '🌙' : '☀️';
-    themeToggle.title = savedTheme === 'light' ? 'Chuyển sang Tối' : 'Chuyển sang Sáng';
-  }
-  themeToggle.addEventListener('click', () => {
-    const newTheme = body.dataset.theme === 'light' ? 'dark' : 'light';
-    body.dataset.theme = newTheme;
-    localStorage.setItem('theme', newTheme);
-    themeToggle.textContent = newTheme === 'light' ? '🌙' : '☀️';
-    themeToggle.title = newTheme === 'light' ? 'Chuyển sang Tối' : 'Chuyển sang Sáng';
-  });
-  applySavedTheme();
-
-  // 2. Logic Đăng xuất
-  logoutButton.addEventListener('click', () => {
-    localStorage.removeItem('token');
-    window.socket.disconnect();
-    window.location.href = '/index.html';
-  });
-
+ 
   // 3. Logic chuyển Tab (User/Group) - ĐÃ SỬA LỖI MẤT DANH SÁCH
   const tabs = document.querySelectorAll('.sidebar-tab');
   
