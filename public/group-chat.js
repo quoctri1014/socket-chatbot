@@ -16,60 +16,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Lấy token (cần thiết cho API)
         const token = localStorage.getItem('token');
 
-        // --- HÀM RENDER DANH SÁCH NHÓM ---
-        // Hàm này được gọi bởi socket event trong main.js
-        window.renderGroupListFromCache = function() { 
-            groupListDiv.innerHTML = '';
-
-            if (!window.allGroupsCache || window.allGroupsCache.length === 0) {
-                groupListDiv.innerHTML = '<p class="empty-list-msg">Bạn chưa tham gia nhóm nào.</p>';
-                return;
-            }
-
-            window.allGroupsCache.forEach(group => {
-                const groupItem = document.createElement('div');
-                groupItem.className = 'group-item';
-                
-                const avatar = document.createElement('div');
-                avatar.className = 'user-avatar';
-                avatar.textContent = group.name.charAt(0).toUpperCase();
-
-                const groupInfo = document.createElement('div');
-                groupInfo.className = 'user-info';
-                
-                const groupName = document.createElement('div');
-                groupName.className = 'user-name';
-                groupName.textContent = group.name;
-                
-                const groupPreview = document.createElement('div');
-                groupPreview.className = 'user-preview';
-                groupPreview.textContent = 'Chat nhóm';
-                
-                groupInfo.appendChild(groupName);
-                groupInfo.appendChild(groupPreview);
-                groupItem.appendChild(avatar);
-                groupItem.appendChild(groupInfo);
-                groupItem.dataset.groupId = group.id;
-
-                if (window.currentChatContext.type === 'group' && window.currentChatContext.id === group.id) {
-                    groupItem.classList.add('active');
-                }
-
-                groupItem.onclick = () => {
-                    const newContext = { type: 'group', id: group.id, name: group.name };
-                    // Gọi hàm global từ main.js
-                    window.activateChat(newContext); 
-                    // Yêu cầu lịch sử nhóm (dùng socket global)
-                    window.socket.emit('loadGroupHistory', { groupId: group.id });
-                };
-                groupListDiv.appendChild(groupItem);
-            });
-        }
-        
-        // (MỚI) Hàm highlight item (để main.js gọi)
-        window.highlightGroupItem = function(groupId) {
-             const activeGroupItem = groupListDiv.querySelector(`[data-group-id="${groupId}"]`);
-             if (activeGroupItem) activeGroupItem.classList.add('active');
+       
         }
 
         // --- SOCKET LISTENERS (Chỉ dành cho nhóm) ---
