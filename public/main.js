@@ -28,6 +28,66 @@ if (path === '/' || path.endsWith('/index.html')) {
   }
 }
 
+if (path.endsWith('/register.html')) {
+  const registerForm = document.getElementById('register-form');
+  const registerMessage = document.getElementById('register-message');
+  if (registerForm) {
+    registerForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      registerMessage.textContent = '';
+      const username = document.getElementById('register-username').value;
+      const password = document.getElementById('register-password').value;
+      try {
+        const res = await fetch('/api/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.message);
+        registerMessage.textContent = data.message + " Vui lòng chuyển sang trang đăng nhập.";
+        registerMessage.style.color = 'green';
+        registerForm.reset();
+      } catch (error) {
+        registerMessage.textContent = error.message;
+        registerMessage.style.color = 'red';
+      }
+    });
+  }
+}
+
+// --- LOGIC TRANG CHAT (TÁI CẤU TRÚC HOÀN TOÀN) ---
+if (path.endsWith('/chat.html')) {
+  const token = localStorage.getItem('token');
+  if (!token) {
+    window.location.href = '/index.html'; // Đẩy về trang đăng nhập
+  }
+
+  // --- BIẾN TOÀN CỤC ---
+  window.socket = io({ auth: { token } });
+  window.myUserId = null;
+  window.myUsername = null;
+  
+  // Cache dữ liệu
+  window.allUsersCache = {}; // Dùng object để truy cập nhanh bằng userId
+  window.allGroupsCache = []; // Dùng array
+
+  // Quản lý bối cảnh chat hiện tại
+  // context: { type: 'user' | 'group', id: Number, name: String }
+  window.currentChatContext = { type: null, id: null, name: null };
+
+  // --- DOM Elements Toàn Cục ---
+  window.messagesContainer = document.getElementById('messages');
+  const userListDiv = document.getElementById('user-list');
+  const chatHeader = document.getElementById('chat-header-title');
+  const chatForm = document.getElementById('chat-form');
+  const messageInput = document.getElementById('message-input');
+  const sendButton = chatForm.querySelector('button[type="submit"]');
+  const logoutButton = document.getElementById('logout-button');
+  const myUsernameSpan = document.getElementById('my-username');
+  const searchInput = document.getElementById('search-input');
+  const themeToggle = document.getElementById('theme-toggle');
+  const body = document.body;
 
   // --- LOGIC CHUNG (TAB, THEME, LOGOUT) ---
 
