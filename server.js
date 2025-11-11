@@ -101,6 +101,23 @@ const tools = [
         required: ["location"]
       }
     }
+  },
+  {
+    type: "function",
+    function: {
+      name: "search_internal_database",
+      description: "Tìm kiếm thông tin người dùng trong hệ thống nội bộ dựa trên tên.",
+      parameters: {
+        type: "object",
+        properties: {
+          username: {
+            type: "string",
+            description: "Tên người dùng cần tìm, ví dụ: 'thanhhieu', 'phong'."
+          }
+        },
+        required: ["username"]
+      }
+    }
   }
 ];
 
@@ -170,6 +187,23 @@ async function getTouristAttractions(location) {
   }
 }
 
+// (GIAI ĐOẠN 2) Hàm hỗ trợ cho tool mới
+async function searchInternalDatabase(username) {
+  try {
+    const [users] = await db.query(
+      'SELECT id, username, createdAt FROM users WHERE username LIKE ? AND id != 0', 
+      [`%${username}%`]
+    );
+    if (users.length === 0) {
+      return JSON.stringify({ info: `Không tìm thấy người dùng nào có tên giống '${username}'.` });
+    }
+    return JSON.stringify(users);
+  } catch (error) {
+    console.error("Lỗi khi tìm kiếm DB nội bộ:", error.message);
+    return JSON.stringify({ error: "Lỗi khi truy vấn cơ sở dữ liệu." });
+  }
+}
+
 // ---------------------------------------------------------------
 // --- (KẾT THÚC) KHỐI CODE THÊM MỚI ---
 // ---------------------------------------------------------------
@@ -199,7 +233,8 @@ async function handleAIChat(userMessage, myUserId, myUsername) {
       Bạn đang nói chuyện với người dùng tên là '${myUsername}'.
       Bạn có các công cụ để tra cứu thời tiết và địa điểm du lịch.
       Khi người dùng hỏi, hãy sử dụng các công cụ này để lấy dữ liệu.
-      Sau đó, hãy TỔNG HỢP dữ liệu (thời tiết, địa điểm) để đưa ra lời khuyên về
+       Bạn cũng có thể tìm kiếm người dùng trong database nội bộ.
+       Sau đó, hãy TỔNG HỢP dữ liệu để đưa ra lời khuyên về
       địa điểm và thời gian đi chơi hợp lý.
       Ví dụ: Nếu trời mưa, gợi ý bảo tàng. Nếu trời nắng, gợi ý công viên.
       Luôn trả lời bằng tiếng Việt.`
@@ -212,7 +247,7 @@ async function handleAIChat(userMessage, myUserId, myUsername) {
       `SELECT content, senderId FROM messages 
        WHERE ((senderId = ? AND recipientId = 0) OR (senderId = 0 AND recipientId = ?))
        ORDER BY createdAt DESC LIMIT 9`, // SỬA LỖI: Chỉ lấy 9 tin nhắn cũ nhất
-      [myUserId, myUserId] // SỬA LỖI: Phải là [myUserId, myUserId] để khớp với 2 dấu ?
+      [myUserId, myUserId]
     );
     // Thêm lịch sử vào mảng (theo thứ tự từ cũ đến mới)
     for (const msg of history.reverse()) {
@@ -258,6 +293,8 @@ async function handleAIChat(userMessage, myUserId, myUsername) {
           functionResponse = await getWeatherData(functionArgs.location);
         } else if (functionName === 'get_tourist_attractions') {
           functionResponse = await getTouristAttractions(functionArgs.location);
+        } else if (functionName === 'search_internal_database') {
+          functionResponse = await searchInternalDatabase(functionArgs.username);
         }
 
         // Thêm kết quả của tool vào lịch sử
@@ -330,6 +367,27 @@ const authenticateToken = (req, res, next) => {
 };
 
 // --- Các API Endpoints ---
+
+// (SỬA LỖI) Thêm lại API endpoint cho việc đăng ký
+app.post('/api/register', async (req, res) => {
+  try {
+    const { username, password } = req.body;
+    if (!username || !password) {
+      return res.status(400).json({ message: 'Vui lòng nhập tên và mật khẩu.' });
+    }
+    // Mã hóa mật khẩu
+    const passwordHash = await bcrypt.hash(password, 10);
+    // Lưu vào database
+    await db.query('INSERT INTO users (username, passwordHash) VALUES (?, ?)', [username, passwordHash]);
+    res.status(201).json({ message: 'Đăng ký thành công!' });
+  } catch (error) {
+    if (error.code === 'ER_DUP_ENTRY') {
+      return res.status(400).json({ message: 'Tên đăng nhập đã tồn tại.' });
+    }
+    console.error('Lỗi đăng ký:', error);
+    res.status(500).json({ message: 'Lỗi máy chủ.' });
+  }
+});
 
 app.post('/api/login', async (req, res) => {
   try {

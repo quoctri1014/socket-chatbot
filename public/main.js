@@ -83,6 +83,7 @@ if (path.endsWith('/chat.html')) {
   const chatForm = document.getElementById('chat-form');
   const messageInput = document.getElementById('message-input');
   const sendButton = chatForm.querySelector('button[type="submit"]');
+  const typingIndicator = document.getElementById('typing-indicator'); // (GĐ 2)
   const logoutButton = document.getElementById('logout-button');
   const myUsernameSpan = document.getElementById('my-username');
   const searchInput = document.getElementById('search-input');
@@ -90,6 +91,36 @@ if (path.endsWith('/chat.html')) {
   const body = document.body;
 
   // --- LOGIC CHUNG (TAB, THEME, LOGOUT) ---
+
+  // (GIAI ĐOẠN 2) Logic Typing Indicator
+  let typingTimer;
+  messageInput.addEventListener('input', () => {
+    // Chỉ gửi khi đang chat 1-1 với người dùng khác
+    if (window.currentChatContext.type === 'user' && window.currentChatContext.id !== 0) {
+      // Gửi sự kiện 'typing' ngay lập tức
+      window.socket.emit('typing', { recipientId: window.currentChatContext.id });
+
+      // Đặt lại bộ đếm thời gian
+      clearTimeout(typingTimer);
+      typingTimer = setTimeout(() => {
+        window.socket.emit('stopTyping', { recipientId: window.currentChatContext.id });
+      }, 2000); // Gửi 'stopTyping' sau 2 giây không gõ
+    }
+  });
+
+  // Lắng nghe sự kiện 'typing' từ người khác
+  window.socket.on('typing', ({ senderId }) => {
+    if (window.currentChatContext.type === 'user' && window.currentChatContext.id === senderId) {
+      typingIndicator.textContent = `${window.currentChatContext.name} đang gõ...`;
+      typingIndicator.classList.remove('hidden');
+    }
+  });
+
+  window.socket.on('stopTyping', ({ senderId }) => {
+    if (window.currentChatContext.type === 'user' && window.currentChatContext.id === senderId) {
+      typingIndicator.classList.add('hidden');
+    }
+  });
 
     messageInput.addEventListener('keydown', (e) => {
         // 1. Kiểm tra xem phím nhấn có phải là 'Enter' VÀ không giữ phím 'Shift'
@@ -156,6 +187,7 @@ if (path.endsWith('/chat.html')) {
   window.activateChat = (context) => {
     window.currentChatContext = context;
     window.messagesContainer.innerHTML = ''; // Xóa tin nhắn cũ
+    typingIndicator.classList.add('hidden'); // (GĐ 2) Ẩn chỉ báo typing khi đổi chat
     clearUnreadCount(context.type, context.id);
     // Cập nhật header
     chatHeader.textContent = context.name;
