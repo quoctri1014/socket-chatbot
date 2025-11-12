@@ -291,13 +291,14 @@ if (path.endsWith('/chat.html')) {
     });
 
     users.forEach(user => {
-      // Bỏ qua chính mình (Nhưng AI (id=0) sẽ không bị bỏ qua)
+      window.allUsersCache[user.userId] = user; // 👈 Sửa: Luôn thêm vào cache trước
+
+      // BỎ QUA CHÍNH MÌNH (Logged-in user)
       if (user.userId === window.myUserId) {
-        window.allUsersCache[user.userId] = user; // Vẫn thêm vào cache
-        return;
+        return; // 👈 Sửa: Nếu là mình, thì dừng và không render
       }
       
-      window.allUsersCache[user.userId] = user; // Thêm vào cache
+      // Bắt đầu Render (Code này được chạy cho AI (ID=0) và các user khác)
       
       const userItem = document.createElement('div');
       userItem.className = 'user-item';
@@ -310,6 +311,7 @@ if (path.endsWith('/chat.html')) {
 
       // Thêm chấm trạng thái
       const statusDot = document.createElement('div');
+      // Trạng thái AI giờ đây luôn là true nhờ sửa lỗi ở server.js
       statusDot.className = `status-dot ${user.online ? 'online' : 'offline'}`;
       avatar.appendChild(statusDot);
 

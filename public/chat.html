@@ -3,26 +3,35 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chat Online</title>
+    <title>Chat Online - Chatbot/Group/1-1/E2EE/WebRTC</title>
+    
     <link rel="stylesheet" href="chat-style.css"> 
+    
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-</head>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+    
+    </head>
 <body data-theme="light">
+    
     <div id="app-container">
 
         <div id="sidebar">
+            
             <div id="sidebar-header">
                 <h3 id="my-username">Đang tải...</h3>
                 <div id="header-buttons">
                     <button id="theme-toggle" title="Chuyển chế độ">🌙</button>
-                    <button id="logout-button">Đăng xuất</button>
+                    <button id="logout-button" title="Đăng xuất">
+                        <i class="fas fa-sign-out-alt"></i>
+                    </button>
                 </div>
             </div>
 
             <div id="search-bar">
                 <div class="search-wrapper">
-                    <span class="search-icon">🔍</span>
-                    <input type="text" id="search-input" placeholder="Tìm kiếm người dùng...">
+                    <span class="search-icon"><i class="fas fa-search"></i></span>
+                    <input type="text" id="search-input" placeholder="Tìm kiếm người dùng/nhóm...">
                 </div>
             </div>
 
@@ -31,25 +40,31 @@
                 <button class="sidebar-tab" data-tab="groups">Nhóm</button>
             </div>
 
-            <div id="sidebar-content">
-
-                <div id="users-list-container" class="tab-content active">
+            <div id="tab-content-container">
+                <div id="user-tab-content">
                     <div id="user-list">
-                        </div>
-                </div>
-                
-                <div id="groups-list-container" class="tab-content">
-                    <div id="group-list"></div>
-                        <button id="create-group-btn" class="floating-plus-btn">
-                        <span>＋</span>
-                    </button>
+                        <p class="loading-msg">Đang tải danh sách người dùng...</p>
+                    </div>
                 </div>
 
-            </div> </div> <div id="chat-area">
+                <div id="group-tab-content" class="hidden">
+                    <button id="create-group-btn" class="create-group-btn" title="Tạo nhóm mới">
+                        <i class="fas fa-users"></i> Tạo Nhóm
+                    </button>
+                    <div id="group-list">
+                        <p class="loading-msg">Đang tải danh sách nhóm...</p>
+                    </div>
+                </div>
+            </div>
+            
+        </div>
+
+        <div id="chat-area">
             <div id="chat-header">
-                <h2 id="chat-header-title">Hãy chọn một người dùng để bắt đầu chat</h2>
-                <div id="chat-header-actions">
-                    <button id="call-button" class="header-action-btn" title="Gọi thoại">
+                <h2 id="header-name">Chọn một cuộc trò chuyện</h2>
+                
+                <div id="message-action-buttons" class="hidden">
+                    <button id="phone-call-button" class="header-action-btn" title="Gọi thoại">
                         <i class="fas fa-phone"></i>
                     </button>
                     <button id="video-call-button" class="header-action-btn" title="Gọi video">
@@ -57,12 +72,28 @@
                     </button>
                 </div>
             </div>
-            <div id="messages"></div>
+            
+            <div id="messages">
+                <div class="welcome-message">
+                    Chào mừng bạn đến với ứng dụng chat. Vui lòng chọn một người dùng hoặc nhóm từ thanh bên để bắt đầu trò chuyện.
+                </div>
+            </div>
+            
             <div id="typing-indicator" class="hidden">Người kia đang gõ...</div>
+            
             <form id="chat-form">
-                <button type="button" id="attach-button" title="Đính kèm file">+</button>
-                <input id="message-input" autocomplete="off" placeholder="Chọn một người để nhắn tin..." disabled/>
-                <button type="submit" disabled>Gửi</button>
+                <button type="button" id="attach-button" title="Đính kèm file" disabled>
+                    <i class="fas fa-paperclip"></i>
+                </button>
+                <input 
+                    id="message-input" 
+                    autocomplete="off" 
+                    placeholder="Chọn một người để nhắn tin..." 
+                    disabled
+                />
+                <button type="submit" disabled title="Gửi tin nhắn">
+                    <i class="fas fa-paper-plane"></i>
+                </button>
             </form>
         </div>
     </div>
@@ -72,16 +103,23 @@
             <h2>Tạo Nhóm Mới</h2>
             <input type="text" id="group-name-input" placeholder="Nhập tên nhóm...">
             <h3>Chọn thành viên:</h3>
-            <div id="modal-user-list"></div>
+            <div id="modal-user-list">
+                </div>
             <div class="modal-actions">
-                <button id="cancel-create-group">Hủy</button>
-                <button id="confirm-create-group">Tạo</button>
+                <button id="cancel-create-group" class="reject-btn">Hủy</button>
+                <button id="confirm-create-group" class="answer-btn">Tạo</button>
             </div>
         </div>
     </div>
 
     <script src="/socket.io/socket.io.js"></script>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.2.0/crypto-js.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.2.0/aes.min.js"></script> 
+    
     <script src="main.js"></script> 
+    
     <script src="group-chat.js"></script> 
-</body> 
+
+</body>
 </html>
