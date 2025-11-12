@@ -141,15 +141,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const groupName = groupNameInput.value.trim();
             const selectedUsers = [];
             
-            // Lấy ID các user được chọn
-            modalUserList.querySelectorAll('input[type="checkbox"]:checked').forEach(input => {
-                selectedUsers.push(parseInt(input.value));
-            });
-            
-            if (!groupName || selectedUsers.length === 0) {
-                alert('Vui lòng nhập tên nhóm và chọn ít nhất 1 thành viên.');
-                return;
-            }
+          
 
             try {
                 // (Giữ nguyên fetch)
