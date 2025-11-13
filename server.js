@@ -565,7 +565,12 @@ io.on('connection', async (socket) => {
     }
   });
 
- 
+  // --- khi user ngắt kết nối (Giữ nguyên) ---
+  socket.on('disconnect', () => {
+    console.log(`User ${myUsername} (ID: ${myUserId}) disconnected.`);
+    delete onlineUsers[myUserId];
+    io.emit('userOffline', { userId: myUserId });
+  });
 }); // <-- đóng ngoặc cho io.on('connection', ...)
 
 
