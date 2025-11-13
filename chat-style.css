@@ -1,0 +1,792 @@
+:root {
+    --primary-color: #353A5F;
+    --accent-color: #9EBAF3;
+    --background-color: #ffffff;
+    --sidebar-bg: #ffffff;
+    --text-color: #111111;
+    --border-color: #e5e5e5;
+    --message-bg: #f5f5f5; 
+    --own-message-bg: #F8F8FF;
+    --own-message-color: #000000;
+    --hover-color: #f0f0f0;
+    --text-secondary: #555555;
+    --green-online: #22c55e;
+    --red-offline: #f87171;
+}
+
+[data-theme="dark"] {
+    --primary-color: #353A5F;
+    --accent-color: #9EBAF3;
+    --background-color: #111111;
+    --sidebar-bg: #1c1c1c;
+    --text-color: #ffffff;
+    --border-color: #333333;
+    --message-bg: #222222; 
+    --own-message-bg: #F8F8FF;
+    --own-message-color: #000000;
+    --hover-color: #2a2a2a;
+    --text-secondary: #bbbbbb;
+    --green-online: #22c55e;
+    --red-offline: #f87171;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Inter', 'Segoe UI', Roboto, sans-serif;
+}
+
+body {
+    background: var(--background-color);
+    color: var(--text-color);
+    height: 100vh;
+    overflow: hidden;
+    transition: background 0.3s, color 0.3s;
+}
+
+#app-container {
+    display: flex;
+    height: 100vh;
+    gap: 2px;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+    width: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
+}
+
+[data-theme="dark"] ::-webkit-scrollbar-thumb {
+    background: #555;
+}
+
+[data-theme="dark"] ::-webkit-scrollbar-thumb:hover {
+    background: #777;
+}
+
+.hidden {
+    display: none !important;
+}
+
+/**
+ * ====================================================================
+ * PHẦN THANH BÊN (SIDEBAR)
+ * ====================================================================
+ */
+#sidebar {
+    width: 28%;
+    min-width: 280px;
+    max-width: 350px;
+    background: var(--sidebar-bg);
+    border-right: 1px solid var(--border-color);
+    display: flex;
+    flex-direction: column;
+    box-shadow: 2px 0 10px rgba(0, 0, 0, 0.05);
+}
+
+/* Header của Sidebar */
+#sidebar-header {
+    padding: 20px;
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: linear-gradient(120deg, var(--primary-color), var(--accent-color));
+    color: white;
+    border-bottom-left-radius: 12px;
+    border-bottom-right-radius: 12px;
+}
+
+#my-username {
+    font-size: 20px;
+    font-weight: 700;
+}
+
+#header-buttons {
+    display: flex;
+    gap: 10px;
+}
+
+#header-buttons button {
+    padding: 6px 12px;
+    border: none;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background 0.3s;
+}
+
+#header-buttons button:hover {
+    background: rgba(255, 255, 255, 0.35);
+}
+
+/* Thanh Search chung */
+.search-wrapper {
+    display: flex;
+    align-items: center;
+    background-color: var(--background-color);
+    border: 1px solid var(--border-color);
+    border-radius: 20px;
+    padding: 4px 12px;
+    gap: 6px;
+    width: 90%;
+    max-width: 220px;
+    margin: 10px auto 0 auto;
+}
+
+.search-wrapper input {
+    border: none;
+    outline: none;
+    width: 100%;
+    font-size: 14px;
+    background: transparent;
+    color: var(--text-color);
+}
+
+.search-wrapper .search-icon {
+    font-size: 16px;
+    color: var(--text-secondary);
+}
+
+/* Thanh Tabs */
+#sidebar-tabs {
+    display: flex;
+    padding: 10px 10px 0 10px;
+    gap: 5px;
+}
+
+.sidebar-tab {
+    flex: 1;
+    padding: 10px;
+    border: none;
+    border-radius: 8px 8px 0 0;
+    background-color: transparent;
+    color: var(--text-secondary);
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: color 0.2s;
+}
+
+.sidebar-tab.active {
+    background-color: var(--background-color);
+    color: var(--primary-color);
+    border-bottom: 3px solid var(--primary-color);
+}
+
+.tab-content {
+    display: none;
+    flex: 1;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.tab-content.active {
+    display: flex;
+}
+
+/* Danh sách Users/Groups */
+/* Container cho danh sách */
+#users-list-container,
+#groups-list-container {
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px 0;
+}
+
+#groups-list-container {
+    position: relative; /* Cho nút tạo nhóm */
+}
+
+/* Item trong danh sách */
+.user-item,
+.group-item {
+    display: flex;
+    gap: 12px;
+    padding: 12px 16px;
+    border-radius: 16px;
+    margin: 4px 10px;
+    cursor: pointer;
+    transition: all 0.2s;
+    align-items: center;
+}
+
+.user-item:hover,
+.group-item:hover {
+    transform: translateX(5px);
+    background-color: var(--hover-color);
+}
+
+.user-item.active,
+.group-item.active {
+    background: linear-gradient(120deg, var(--primary-color), var(--accent-color));
+    color: white;
+    box-shadow: 0 0 8px var(--primary-color);
+}
+
+/* Avatar và trạng thái */
+.avatar,
+.user-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: #ccc;
+    position: relative;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    color: #fff;
+}
+
+/* Dấu chấm trạng thái (dùng cho cả ::after và .status-dot) */
+.user-avatar.online::after,
+.avatar.online::after,
+.status-dot.online {
+    background: var(--green-online);
+}
+
+.user-avatar.offline::after,
+.avatar.offline::after,
+.status-dot.offline {
+    background: var(--red-offline);
+}
+
+.user-avatar.online::after,
+.avatar.online::after,
+.user-avatar.offline::after,
+.avatar.offline::after {
+    content: "";
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    border: 2px solid var(--sidebar-bg);
+    position: absolute;
+    bottom: 0;
+    right: 0;
+}
+
+.status-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    position: absolute;
+    bottom: 2px;
+    right: 2px;
+    border: 2px solid var(--sidebar-bg);
+}
+
+
+/* Thông tin User/Group */
+.user-info {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden; /* Quan trọng để ellipsis hoạt động */
+}
+
+.user-name,
+.group-name {
+    font-weight: 600;
+    font-size: 15px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.user-preview,
+.group-preview {
+    font-size: 12px;
+    color: var(--text-secondary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.user-item.active .user-preview,
+.group-item.active .group-preview {
+    color: #f0f0f0;
+}
+
+/* Nút tạo nhóm */
+#create-group-btn {
+    position: absolute;
+    bottom: 20px;
+    right: 20px;
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    border: none;
+    background: linear-gradient(120deg, var(--primary-color), var(--accent-color));
+    color: white;
+    font-size: 30px;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    transition: transform 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 5; /* Đảm bảo nổi lên trên danh sách */
+}
+
+#create-group-btn:hover {
+    transform: scale(1.1);
+}
+
+/**
+ * ====================================================================
+ * KHU VỰC CHAT (CHAT AREA)
+ * ====================================================================
+ */
+#chat-area {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    background: var(--background-color);
+}
+
+/* Header của Chat */
+#chat-header {
+    padding: 18px 24px;
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: var(--sidebar-bg); /* Dùng sidebar-bg cho header để đồng nhất */
+}
+
+#chat-header-title,
+#chat-with-name {
+    font-weight: 600;
+    font-size: 18px;
+    color: var(--text-color);
+}
+
+#chat-header-actions {
+    display: flex;
+    gap: 15px;
+}
+
+.header-action-btn {
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    font-size: 18px;
+    cursor: pointer;
+    transition: color 0.2s;
+}
+
+.header-action-btn:hover {
+    color: var(--primary-color);
+}
+
+.header-action-btn:disabled {
+    color: var(--border-color);
+    cursor: not-allowed;
+}
+
+/* Khu vực tin nhắn */
+#messages {
+    flex: 1;
+    padding: 20px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    background: linear-gradient(to bottom, var(--background-color), var(--message-bg)); /* Thêm gradient nhẹ */
+}
+
+.message {
+    max-width: 65%;
+    padding: 14px 20px;
+    border-radius: 24px;
+    position: relative;
+    word-wrap: break-word;
+    font-size: 15px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    animation: fadeInUp 0.3s ease;
+}
+
+.message.recipient {
+    background-color: var(--message-bg);
+    align-self: flex-start;
+    border-bottom-left-radius: 4px;
+    color: var(--text-color);
+}
+
+.message.user {
+    background-color: var(--own-message-bg);
+    color: var(--own-message-color);
+    align-self: flex-end;
+    border-bottom-right-radius: 4px;
+}
+
+.message-sender {
+    font-weight: 700;
+    font-size: 13px;
+    margin-bottom: 4px;
+    color: var(--primary-color);
+}
+
+.message-content {
+    line-height: 1.5;
+}
+
+.timestamp {
+    opacity: 0.7;
+    font-size: 11px;
+    margin-top: 5px;
+    display: block;
+    text-align: right;
+    color: inherit; /* Kế thừa màu từ tin nhắn (trắng hoặc đen) */
+}
+
+/* Typing Indicator */
+#typing-indicator {
+    font-size: 13px;
+    color: var(--text-secondary);
+    padding: 8px 24px;
+    animation: blink 1s infinite;
+}
+
+/* Keyframes */
+@keyframes fadeInUp {
+    0% {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    100% {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes blink {
+    0%,
+    100% {
+        opacity: 0;
+    }
+
+    50% {
+        opacity: 1;
+    }
+}
+
+/* Message Form */
+#chat-form {
+    display: flex;
+    padding: 16px 24px;
+    border-top: 1px solid var(--border-color);
+    background: var(--sidebar-bg);
+    gap: 10px;
+    align-items: center;
+}
+
+#message-input {
+    flex: 1;
+    padding: 14px 20px;
+    border: 1px solid var(--border-color);
+    border-radius: 30px;
+    background-color: var(--background-color);
+    color: var(--text-color);
+    outline: none;
+    transition: border 0.3s, box-shadow 0.3s;
+}
+
+#message-input:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 8px var(--primary-color, rgba(255, 126, 95, 0.4));
+}
+
+#chat-form button[type="submit"] {
+    padding: 14px 24px;
+    border: none;
+    border-radius: 30px;
+    background: linear-gradient(120deg, var(--primary-color), var(--accent-color));
+    color: white;
+    cursor: pointer;
+    font-weight: 600;
+    transition: background 0.3s, transform 0.2s;
+}
+
+#chat-form button[type="submit"]:hover:not(:disabled) {
+    transform: scale(1.05);
+}
+
+#chat-form button[type="submit"]:disabled {
+    background-color: var(--border-color);
+    cursor: not-allowed;
+}
+
+#attach-button {
+    padding: 14px;
+    border: none;
+    border-radius: 50%;
+    background: linear-gradient(120deg, var(--primary-color), var(--accent-color));
+    color: white;
+    cursor: pointer;
+    width: 48px;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    transition: transform 0.2s;
+}
+
+#attach-button:hover {
+    transform: scale(1.1);
+}
+
+/**
+ * ====================================================================
+ * MODAL (HỘP THOẠI) - Ví dụ: Tạo nhóm
+ * ====================================================================
+ */
+.modal-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.6);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 100;
+}
+
+.modal-content {
+    background: var(--sidebar-bg);
+    padding: 25px;
+    border-radius: 16px;
+    width: 90%;
+    max-width: 400px;
+    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.3);
+    animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+.modal-content h2 {
+    color: var(--text-color);
+    margin-bottom: 20px;
+    font-size: 1.5em;
+}
+
+#group-name-input {
+    width: 100%;
+    padding: 12px;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    background: var(--background-color);
+    color: var(--text-color);
+    font-size: 16px;
+    margin-bottom: 20px;
+}
+
+#modal-user-list {
+    max-height: 200px;
+    overflow-y: auto;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 10px;
+}
+
+.modal-user-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.modal-user-item:hover {
+    background: var(--hover-color);
+}
+
+.modal-user-item input[type="checkbox"] {
+    /* Đảm bảo checkbox hiển thị rõ ràng */
+    width: 18px;
+    height: 18px;
+    accent-color: var(--primary-color);
+}
+
+.modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+.modal-actions button {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.2s;
+}
+
+.modal-actions button:hover {
+    opacity: 0.9;
+}
+
+#cancel-create-group {
+    background: var(--message-bg);
+    color: var(--text-secondary);
+}
+
+#confirm-create-group {
+    background: linear-gradient(120deg, var(--primary-color), var(--accent-color));
+    color: white;
+}
+.empty-list-msg {
+    color: var(--text-secondary);
+    font-style: italic;
+    text-align: center;
+    padding-top: 20px;
+    font-size: 14px;
+}
+.user-item, .group-item {
+  position: relative;
+}
+
+.unread-badge {
+  display: none; /* Ẩn ban đầu */
+  position: absolute;
+  top: 50%; /* Căn giữa theo chiều dọc */
+  right: 15px; /* Đặt ở bên phải */
+  transform: translateY(-50%);
+  
+  background-color: var(--accent-color); /* Dùng màu nhấn của bạn */
+  color: white; /* Chữ trắng */
+  
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 7px;
+  border-radius: 12px; /* Bo tròn */
+  min-width: 10px; /* Để nó tròn đẹp khi chỉ có 1 số */
+  text-align: center;
+  line-height: 1.1;
+  
+  /* Ngăn không cho badge làm hỏng layout */
+  z-index: 10; 
+}
+#sidebar {
+    position: relative; /* Rất quan trọng! */
+    /* Các thuộc tính khác của sidebar (width, height, background...) giữ nguyên */
+    display: flex; /* Dùng flex để các phần tử con sắp xếp */
+    flex-direction: column; /* Xếp theo cột */
+    height: 100vh; /* Chiều cao đầy đủ của màn hình */
+}
+
+/* 2. Đảm bảo khu vực nội dung (tab-content) chiếm hết không gian còn lại */
+#sidebar-content {
+    flex-grow: 1; /* Lấp đầy không gian còn lại (quan trọng) */
+    overflow: hidden; /* Ngăn không cho chính nó cuộn */
+    display: flex; /* Dùng flex để quản lý các tab-content */
+}
+
+/* 3. Style chung cho các tab-content (Users và Groups) */
+.tab-content {
+    display: none; /* Mặc định ẩn, JS sẽ hiện khi active */
+    flex-direction: column; /* Nội dung bên trong xếp dọc */
+    width: 100%;
+    height: 100%; /* Chiếm hết chiều cao của sidebar-content */
+    overflow: hidden; /* Ngăn bản thân tab-content cuộn */
+}
+
+/* 4. Tab đang hoạt động */
+.tab-content.active {
+    display: flex; /* Hiển thị tab đang active */
+}
+
+/* 5. CÁC DANH SÁCH (User và Group) mới là nơi cuộn */
+#user-list,
+#group-list {
+    flex-grow: 1; /* Lấp đầy không gian còn lại trong tab-content */
+    overflow-y: auto; /* CHỈ PHẦN DANH SÁCH NÀY MỚI CUỘN */
+    padding-left: 10px;
+    padding-right: 10px;
+}
+
+
+#create-group-btn {
+    
+    /* THÊM: Style mới cho nút dạng block bình thường */
+    margin: 10px 20px 15px 20px; 
+    padding: 15px 20px;
+    background: linear-gradient(120deg, var(--primary-color), var(--accent-color));
+    color: white;
+    border: none;
+    border-radius: 12px;
+    font-size: 1.1em;
+    font-weight: 700;
+    cursor: pointer;
+    text-align: center;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+    transition: all 0.2s ease;
+    flex-shrink: 0; /* Ngăn nút bị co lại */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+#create-group-btn:hover {
+    opacity: 0.95;
+    transform: translateY(-2px); /* Bỏ translateX */
+    box-shadow: 0 6px 15px rgba(0, 0, 0, 0.3);
+}
+
+/* (SỬA) Đảm bảo class plus-button cũng được style đúng nếu bạn dùng nó */
+.plus-button {
+    font-size: 1.1em;
+    line-height: 1.3;
+}
+.floating-plus-btn {
+  position: fixed;
+  bottom: 30px;
+  right: 30px;
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #4CAF50, #2E7D32);
+  color: white;
+  font-size: 30px;
+  border: none;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+.floating-plus-btn:hover {
+  transform: scale(1.1);
+  box-shadow: 0 6px 15px rgba(0,0,0,0.4);
+}

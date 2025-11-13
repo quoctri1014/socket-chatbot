@@ -1,0 +1,146 @@
+/* Tên file: public/style.css (PHIÊN BẢN ĐÃ "HỢP TÔNG") */
+
+/* 1. Lấy 100% biến CSS từ chat-style.css để đồng bộ theme */
+:root {
+    --primary-color: #353A5F;
+    --accent-color: #9EBAF3;
+    --background-color: #ffffff;
+    --sidebar-bg: #ffffff;
+    --text-color: #111111;
+    --border-color: #e5e5e5;
+    --message-bg: #f5f5f5; 
+    --own-message-bg: #F8F8FF;
+    --own-message-color: #000000;
+    --hover-color: #f0f0f0;
+    --text-secondary: #555555;
+    --green-online: #22c55e;
+    --red-offline: #f87171;
+}
+
+[data-theme="dark"] {
+    --primary-color: #353A5F;
+    --accent-color: #9EBAF3;
+    --background-color: #111111;
+    --sidebar-bg: #1c1c1c;
+    --text-color: #ffffff;
+    --border-color: #333333;
+    --message-bg: #222222; 
+    --own-message-bg: #F8F8FF;
+    --own-message-color: #000000;
+    --hover-color: #2a2a2a;
+    --text-secondary: #bbbbbb;
+    --green-online: #22c55e;
+    --red-offline: #f87171;
+}
+
+/* 2. Style cơ bản */
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+/* Áp dụng theme cho body */
+body {
+    font-family: 'Inter', 'Segoe UI', Roboto, sans-serif;
+    background-color: var(--background-color);
+    color: var(--text-color);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    transition: background 0.3s, color 0.3s;
+}
+
+/* 3. Style cho Form */
+.auth-container {
+    width: 100%;
+    max-width: 400px;
+    padding: 2rem;
+}
+
+.auth-form {
+    background: var(--sidebar-bg);
+    padding: 2.5rem;
+    border-radius: 16px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    border: 1px solid var(--border-color);
+}
+
+.auth-form h2 { 
+    color: var(--text-color); 
+    text-align: center; 
+    margin-top: 0;
+    margin-bottom: 1.5rem;
+    font-weight: 700;
+}
+
+/* Style input "hợp tông" với message-input */
+.auth-form input { 
+    width: 100%;
+    padding: 14px 20px;
+    margin-bottom: 1rem;
+    border: 1px solid var(--border-color);
+    background: var(--background-color);
+    color: var(--text-color);
+    border-radius: 30px; /* Giống input chat */
+    font-size: 15px;
+    outline: none;
+    transition: border 0.3s, box-shadow 0.3s;
+}
+
+.auth-form input:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 8px var(--primary-color);
+}
+
+/* Style button "hợp tông" với nút Gửi */
+.auth-form button[type="submit"] { 
+    width: 100%; 
+    padding: 14px 24px;
+    background: linear-gradient(120deg, var(--primary-color), var(--accent-color));
+    color: white; 
+    border: none; 
+    border-radius: 30px; 
+    cursor: pointer; 
+    font-size: 16px;
+    font-weight: 600;
+    transition: background 0.3s, transform 0.2s;
+}
+
+.auth-form button[type="submit"]:hover { 
+    transform: scale(1.03);
+}
+
+/* 4. Style cho thông báo Lỗi / Thành công */
+.message-display {
+    font-size: 14px; 
+    text-align: center;
+    min-height: 1.2em;
+    margin-top: 1rem;
+    font-weight: 500;
+}
+
+.message-display.error {
+    color: var(--red-offline); /* Dùng biến màu đỏ */
+}
+
+.message-display.success {
+    color: var(--green-online); /* Dùng biến màu xanh */
+}
+
+/* 5. Style cho link chuyển đổi */
+.switch-form { 
+    color: var(--text-secondary); 
+    text-align: center; 
+    margin-top: 1.5rem; 
+    font-size: 14px; 
+}
+.switch-form a { 
+    color: var(--accent-color); /* Dùng màu nhấn */
+    text-decoration: none; 
+    font-weight: bold; 
+}
+.switch-form a:hover { 
+    text-decoration: underline; 
+}
