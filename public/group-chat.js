@@ -141,7 +141,32 @@ document.addEventListener('DOMContentLoaded', () => {
             const groupName = groupNameInput.value.trim();
             const selectedUsers = [];
             
-           
+            // Lấy ID các user được chọn
+            modalUserList.querySelectorAll('input[type="checkbox"]:checked').forEach(input => {
+                selectedUsers.push(parseInt(input.value));
+            });
+            
+            if (!groupName || selectedUsers.length === 0) {
+                alert('Vui lòng nhập tên nhóm và chọn ít nhất 1 thành viên.');
+                return;
+            }
+
+            try {
+                // (Giữ nguyên fetch)
+                const res = await fetch('/api/groups/create', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}` 
+                    },
+                    body: JSON.stringify({ name: groupName, members: selectedUsers })
+                });
+
+                const data = await res.json();
+                if (!res.ok) {
+                    throw new Error(data.message);
+                }
+                
                 // Thành công!
                 modal.classList.add('hidden');
                 groupNameInput.value = '';

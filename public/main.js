@@ -156,7 +156,15 @@ if (path.endsWith('/chat.html')) {
 
   // --- CÁC HÀM TIỆN ÍCH TOÀN CỤC ---
 
- 
+  // (MỚI) Hàm kích hoạt cửa sổ chat (dùng cho cả User và Group)
+  window.activateChat = (context) => {
+    window.currentChatContext = context;
+    window.messagesContainer.innerHTML = ''; // Xóa tin nhắn cũ
+    clearUnreadCount(context.type, context.id);
+    // Cập nhật header
+    chatHeader.textContent = context.name;
+
+    // Kích hoạt form
     messageInput.disabled = false;
     sendButton.disabled = false;
     messageInput.placeholder = `Nhắn tin tới ${context.name}...`;
