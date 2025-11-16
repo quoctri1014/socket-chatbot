@@ -152,24 +152,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             try {
-                // (Giữ nguyên fetch)
-                const res = await fetch('/api/groups/create', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${token}` 
-                    },
-                    body: JSON.stringify({ name: groupName, members: selectedUsers })
-                });
-
-                const data = await res.json();
-                if (!res.ok) {
-                    throw new Error(data.message);
-                }
                 
-                // Thành công!
-                modal.classList.add('hidden');
-                groupNameInput.value = '';
                 
                 // Không cần làm gì thêm. Server sẽ tự động gửi sự kiện 'newGroupAdded'
                 // và socket listener (ở trên) sẽ bắt được và cập nhật UI.

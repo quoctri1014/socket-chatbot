@@ -156,14 +156,7 @@ if (path.endsWith('/chat.html')) {
 
   // --- CÁC HÀM TIỆN ÍCH TOÀN CỤC ---
 
-  // (MỚI) Hàm kích hoạt cửa sổ chat (dùng cho cả User và Group)
-  window.activateChat = (context) => {
-    window.currentChatContext = context;
-    window.messagesContainer.innerHTML = ''; // Xóa tin nhắn cũ
-    clearUnreadCount(context.type, context.id);
-    // Cập nhật header
-    chatHeader.textContent = context.name;
-
+ 
     // Kích hoạt form
     messageInput.disabled = false;
     sendButton.disabled = false;
@@ -185,11 +178,7 @@ if (path.endsWith('/chat.html')) {
     }
   };
 
-  // (MỚI) Hàm hiển thị tin nhắn (dùng cho cả 2 loại)
-  window.displayMessage = (msgData, senderType) => {
-    // msgData: { senderUsername, content, createdAt }
-    const item = document.createElement('div');
-    item.classList.add('message', senderType); // 'user' (mình) hoặc 'other'
+
 
     // (MỚI) Thêm tên người gửi (chỉ cho tin nhắn nhóm và là của 'other')
     if (window.currentChatContext.type === 'group' && senderType === 'other') {
