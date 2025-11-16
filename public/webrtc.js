@@ -1,4 +1,4 @@
-// Tên file: public/webrtc.js
+// Tên file: public/webrtc.js (HOÀN CHỈNH)
 
 document.addEventListener('DOMContentLoaded', () => {
     const path = window.location.pathname;
@@ -6,19 +6,20 @@ document.addEventListener('DOMContentLoaded', () => {
     if (path.endsWith('/chat.html')) {
         // --- CẤU HÌNH & BIẾN TOÀN CỤC ---
         
-        // Cấu hình ICE Servers (Sử dụng Google STUN/TURN servers)
+        // Cấu hình ICE Servers
         const iceConfig = {
             iceServers: [
                 { urls: 'stun:stun.l.google.com:19302' },
-                // Thêm các TURN server nếu cần cho NAT xuyên tường lửa phức tạp
+                { urls: 'stun:stun1.l.google.com:19302' },
             ]
         };
 
         // Biến toàn cục WebRTC
         window.peerConnection = null;
         window.localStream = null;
-        window.callTargetId = null; // userId của người đang gọi hoặc được gọi
+        window.callTargetId = null;
         window.isVideoCall = false;
+        window.isCaller = false;
 
         // DOM Elements
         const callModal = document.getElementById('call-modal');
@@ -29,15 +30,13 @@ document.addEventListener('DOMContentLoaded', () => {
         const answerButton = document.getElementById('answer-call-button');
         const toggleMicButton = document.getElementById('toggle-mic-button');
         const toggleCameraButton = document.getElementById('toggle-camera-button');
-        const phoneCallButton = document.getElementById('phone-call-button');
+        const phoneCallButton = document.getElementById('call-button');
         const videoCallButton = document.getElementById('video-call-button');
-
 
         // --- CÁC HÀM XỬ LÝ MEDIA VÀ PC ---
 
         /**
          * Khởi tạo stream (micro/camera)
-         * @param {boolean} withVideo - Có bật camera không.
          */
         async function initLocalStream(withVideo = true) {
             try {
@@ -48,7 +47,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 localVideo.srcObject = window.localStream;
                 window.isVideoCall = withVideo;
                 
-                // Cập nhật trạng thái nút
                 updateCallButtons(true, withVideo);
 
             } catch (err) {
@@ -59,15 +57,14 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         /**
-         * Tạo RTCPeerConnection và cấu hình các sự kiện.
-         * @param {boolean} withVideo - Có bật video không.
+         * Tạo RTCPeerConnection
          */
-        function createPeerConnection(withVideo = true) {
+        function createPeerConnection() {
             if (window.peerConnection) return window.peerConnection;
 
             const pc = new RTCPeerConnection(iceConfig);
 
-            // 1. Gửi ICE Candidates qua socket
+            // Gửi ICE Candidates
             pc.onicecandidate = (event) => {
                 if (event.candidate) {
                     window.socket.emit('webrtcSignal', {
@@ -78,35 +75,28 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             };
 
-            // 2. Nhận remote stream (stream của đối phương)
+            // Nhận remote stream
             pc.ontrack = (event) => {
                 if (remoteVideo.srcObject !== event.streams[0]) {
                     remoteVideo.srcObject = event.streams[0];
                     console.log('Remote stream received');
                     
-                    // Cập nhật UI khi kết nối thành công (stream đã bắt đầu)
-                    callStatus.textContent = withVideo ? 'Đã kết nối (Video Call)' : 'Đã kết nối (Voice Call)';
-                    answerButton.classList.add('hidden'); // Ẩn nút trả lời
-
-                    // Hiển thị remote video nếu là video call
-                    remoteVideo.style.display = withVideo ? 'block' : 'none';
-                    localVideo.style.display = withVideo ? 'block' : 'none';
-
+                    callStatus.textContent = window.isVideoCall ? 'Đã kết nối (Video Call)' : 'Đã kết nối (Voice Call)';
+                    answerButton.classList.add('hidden');
                 }
             };
             
-            // 3. Thêm local stream vào PC
+            // Thêm local stream
             if (window.localStream) {
                 window.localStream.getTracks().forEach(track => {
                     pc.addTrack(track, window.localStream);
                 });
             }
 
-            // 4. Khi kết nối thay đổi trạng thái
+            // Xử lý trạng thái kết nối
             pc.oniceconnectionstatechange = () => {
                 console.log(`ICE state: ${pc.iceConnectionState}`);
-                if (pc.iceConnectionState === 'disconnected' || pc.iceConnectionState === 'failed' || pc.iceConnectionState === 'closed') {
-                    // Tự động ngắt cuộc gọi nếu kết nối thất bại
+                if (pc.iceConnectionState === 'disconnected' || pc.iceConnectionState === 'failed') {
                     hangupCall();
                 }
             };
@@ -118,8 +108,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // --- LOGIC CUỘC GỌI ---
 
         /**
-         * Bắt đầu cuộc gọi (Người gọi)
-         * @param {boolean} isVideo - Là video call hay voice call.
+         * Bắt đầu cuộc gọi
          */
         window.startCall = async (isVideo) => {
             const targetId = window.currentChatContext.id;
@@ -136,19 +125,15 @@ document.addEventListener('DOMContentLoaded', () => {
             
             window.callTargetId = targetId;
             window.isVideoCall = isVideo;
+            window.isCaller = true;
 
             try {
-                // 1. Khởi tạo Stream
                 await initLocalStream(isVideo);
-                
-                // 2. Khởi tạo RTCPeerConnection và thêm track
-                const pc = createPeerConnection(isVideo);
+                const pc = createPeerConnection();
 
-                // 3. Tạo Offer (SDP)
                 const offer = await pc.createOffer();
                 await pc.setLocalDescription(offer);
 
-                // 4. Gửi Offer qua Socket.IO (Signaling)
                 window.socket.emit('webrtcSignal', {
                     type: 'offer',
                     targetId: targetId,
@@ -156,7 +141,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     isVideoCall: isVideo,
                 });
                 
-                // Cập nhật UI
                 callStatus.textContent = `Đang chờ ${targetUsername} chấp nhận cuộc gọi ${isVideo ? 'Video' : 'Voice'}...`;
                 answerButton.classList.add('hidden');
                 callModal.classList.remove('hidden');
@@ -168,22 +152,18 @@ document.addEventListener('DOMContentLoaded', () => {
         };
 
         /**
-         * Trả lời cuộc gọi (Người nhận)
+         * Trả lời cuộc gọi
          */
         async function answerCall() {
-            if (!window.peerConnection) return; // Đã xử lý trong callOffer listener
+            if (!window.peerConnection) return;
             
             callStatus.textContent = window.isVideoCall ? 'Đang kết nối Video...' : 'Đang kết nối Voice...';
-            answerButton.classList.add('hidden'); // Ẩn nút trả lời
+            answerButton.classList.add('hidden');
             
             try {
-                // Đã có local stream và remote description từ callOffer listener
-                
-                // 1. Tạo Answer (SDP)
                 const answer = await window.peerConnection.createAnswer();
                 await window.peerConnection.setLocalDescription(answer);
 
-                // 2. Gửi Answer qua Socket.IO
                 window.socket.emit('webrtcSignal', {
                     type: 'answer',
                     targetId: window.callTargetId,
@@ -210,26 +190,27 @@ document.addEventListener('DOMContentLoaded', () => {
                 window.localStream = null;
             }
 
+            // Gửi tín hiệu hangup
+            if (window.callTargetId) {
+                window.socket.emit('webrtcSignal', {
+                    type: 'hangup',
+                    targetId: window.callTargetId,
+                });
+            }
+
             window.callTargetId = null;
             localVideo.srcObject = null;
             remoteVideo.srcObject = null;
             callModal.classList.add('hidden');
             
-            // Báo hiệu kết thúc cho đối phương (nếu đang trong cuộc gọi)
-            window.socket.emit('webrtcSignal', {
-                type: 'hangup',
-                targetId: window.callTargetId,
-            });
-            
-            updateCallButtons(false, false); // Reset nút
+            updateCallButtons(false, false);
             console.log('Cuộc gọi đã kết thúc.');
         };
-        
-        // --- XỬ LÝ NÚT BẤM VÀ UI ---
 
-        phoneCallButton.addEventListener('click', () => window.startCall(false)); // false = Audio-only
-        videoCallButton.addEventListener('click', () => window.startCall(true));  // true = Video
+        // --- XỬ LÝ NÚT BẤM ---
 
+        phoneCallButton.addEventListener('click', () => window.startCall(false));
+        videoCallButton.addEventListener('click', () => window.startCall(true));
         hangupButton.addEventListener('click', window.hangupCall);
         answerButton.addEventListener('click', answerCall);
         
@@ -245,7 +226,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         toggleCameraButton.addEventListener('click', () => {
-            if (window.localStream) {
+            if (window.localStream && window.isVideoCall) {
                 const videoTrack = window.localStream.getVideoTracks()[0];
                 if (videoTrack) {
                     videoTrack.enabled = !videoTrack.enabled;
@@ -256,17 +237,13 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         /**
-         * Cập nhật trạng thái các nút điều khiển cuộc gọi
-         * @param {boolean} isInCall - Có đang trong cuộc gọi không.
-         * @param {boolean} isVideo - Có phải video call không.
+         * Cập nhật trạng thái nút điều khiển
          */
         function updateCallButtons(isInCall, isVideo) {
             if (isInCall) {
                 toggleMicButton.classList.remove('hidden');
-                // Nút camera chỉ hiện nếu là video call
-                toggleCameraButton.classList.toggle('hidden', !isVideo); 
+                toggleCameraButton.classList.toggle('hidden', !isVideo);
                 
-                // Đảm bảo trạng thái mặc định
                 if (window.localStream) {
                      const audioTrack = window.localStream.getAudioTracks()[0];
                      const videoTrack = window.localStream.getVideoTracks()[0];
@@ -279,45 +256,42 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
-
         // --- XỬ LÝ SOCKET.IO SIGNALING ---
         
-        // 1. Nhận Offer (Người khác gọi mình)
         window.socket.on('webrtcSignal', async (data) => {
+            // 1. Nhận Offer
             if (data.type === 'offer' && data.targetId === window.myUserId) {
                 if (window.peerConnection) {
-                    // Từ chối nếu đang trong cuộc gọi khác
                     window.socket.emit('webrtcSignal', { type: 'reject', targetId: data.senderId });
                     return;
                 }
                 
                 window.callTargetId = data.senderId;
                 window.isVideoCall = data.isVideoCall;
+                window.isCaller = false;
                 const senderUsername = window.allUsersCache[data.senderId]?.username || 'Người lạ';
                 
                 callStatus.textContent = `Cuộc gọi ${data.isVideoCall ? 'Video' : 'Voice'} đến từ ${senderUsername}`;
                 
-                // 1. Khởi tạo Stream và PC trước khi set remote description
                 try {
                     await initLocalStream(data.isVideoCall);
-                    const pc = createPeerConnection(data.isVideoCall);
+                    const pc = createPeerConnection();
                     await pc.setRemoteDescription(new RTCSessionDescription(data.offer));
                     
-                    answerButton.classList.remove('hidden'); // Hiển thị nút trả lời
+                    answerButton.classList.remove('hidden');
                     callModal.classList.remove('hidden');
                     
                 } catch (e) {
                     console.error('Lỗi khi nhận Offer:', e);
                     window.socket.emit('webrtcSignal', { type: 'reject', targetId: data.senderId });
-                    window.hangupCall(); // Tắt stream và reset
+                    window.hangupCall();
                 }
             } 
             
-            // 2. Nhận Answer (Mình đã gọi và đối phương trả lời)
+            // 2. Nhận Answer
             else if (data.type === 'answer' && window.peerConnection && data.targetId === window.myUserId) {
                 console.log('Nhận Answer, thiết lập Remote Description.');
                 await window.peerConnection.setRemoteDescription(new RTCSessionDescription(data.answer));
-                // Kết nối thành công, UI sẽ được cập nhật trong pc.ontrack
             } 
             
             // 3. Nhận ICE Candidate
@@ -329,13 +303,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
             
-            // 4. Nhận Hangup (Đối phương ngắt máy)
+            // 4. Nhận Hangup
             else if (data.type === 'hangup' && data.targetId === window.myUserId) {
                 const senderUsername = window.allUsersCache[data.senderId]?.username || 'Người lạ';
                 alert(`${senderUsername} đã kết thúc cuộc gọi.`);
                 window.hangupCall();
             }
+            
+            // 5. Nhận Reject
+            else if (data.type === 'reject' && data.targetId === window.myUserId) {
+                alert('Cuộc gọi đã bị từ chối.');
+                window.hangupCall();
+            }
         });
         
     } // end if chat.html
-}); // end DOMContentLoaded
+});

@@ -7,10 +7,9 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import db from "./db.js";
 import axios from "axios";
-// THAY THẾ: import OpenAI bằng GoogleGenAI
 import { GoogleGenAI } from "@google/genai";
 
-// THAY THẾ: Sử dụng GEMINI_API_KEY
+// API Keys
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const OPENWEATHER_API_KEY = process.env.OPENWEATHER_API_KEY;
 const GEOAPIFY_API_KEY = process.env.GEOAPIFY_API_KEY;
@@ -18,13 +17,12 @@ const GEOAPIFY_API_KEY = process.env.GEOAPIFY_API_KEY;
 console.log("🔑 Đang kiểm tra Key thời tiết:", OPENWEATHER_API_KEY);
 console.log("🔑 Đang kiểm tra Key địa điểm:", GEOAPIFY_API_KEY);
 
-// THAY THẾ: Kiểm tra Key Gemini
 if (!GEMINI_API_KEY) {
   console.error("ERROR: Missing GEMINI_API_KEY in .env");
   process.exit(1);
 }
 
-// THAY THẾ: Khởi tạo Gemini AI
+// Khởi tạo Gemini AI
 const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
 
 const JWT_SECRET = "day_la_khoa_bi_mat_cua_ban";
@@ -32,7 +30,10 @@ const JWT_SECRET = "day_la_khoa_bi_mat_cua_ban";
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
-  /* options */
+  cors: {
+    origin: "*",
+    methods: ["GET", "POST"]
+  }
 });
 
 // in-memory online users map: { userId: { socketId, username } }
@@ -128,7 +129,7 @@ const toolFunctions = {
   getLocationCoordinates,
 };
 
-// Định nghĩa Tool (Dùng cấu trúc cũ để chuyển đổi cho Gemini)
+// Định nghĩa Tool
 const toolDefinitions = [
   {
     type: "function",
@@ -173,7 +174,7 @@ const toolDefinitions = [
   },
 ];
 
-// --- HÀM XỬ LÝ CHAT AI (ĐÃ HOÀN CHỈNH CHO GEMINI) ---
+// --- HÀM XỬ LÝ CHAT AI (HOÀN CHỈNH CHO GEMINI) ---
 async function handleAIChat(userMessage, myUserId, myUsername) {
   const socket = onlineUsers[myUserId]
     ? io.sockets.sockets.get(onlineUsers[myUserId].socketId)
@@ -299,6 +300,7 @@ async function handleAIChat(userMessage, myUserId, myUsername) {
       recipientId: myUserId,
       content: aiResponseContent,
       createdAt: new Date(),
+      isEncrypted: false // AI messages không mã hóa
     });
   } catch (error) {
     console.error("Lỗi khi gọi Gemini (handleAIChat):", error);
@@ -319,7 +321,7 @@ async function handleAIChat(userMessage, myUserId, myUsername) {
   }
 }
 
-// --- API ROUTES (Giữ nguyên) ---
+// --- API ROUTES ---
 app.use(express.json());
 app.use(express.static("public"));
 
@@ -381,7 +383,7 @@ app.post("/api/login", async (req, res) => {
         .json({ message: "Sai tên người dùng hoặc mật khẩu." });
     }
 
-    // Đã sửa: Tăng thời gian hết hạn lên 90 ngày
+    // Tăng thời gian hết hạn lên 90 ngày
     const token = jwt.sign(
       { userId: user.id, username: user.username },
       JWT_SECRET,
@@ -468,7 +470,7 @@ io.on("connection", async (socket) => {
     } catch (err) {
       console.error("Socket Auth Error:", err.message);
 
-      // ĐÃ SỬA LỖI: Thay connect_error bằng sự kiện tùy chỉnh 'auth_error'
+      // Sử dụng sự kiện tùy chỉnh 'auth_error'
       socket.emit("auth_error", {
         message: "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.",
       });
@@ -479,7 +481,7 @@ io.on("connection", async (socket) => {
   }
 
   if (!myUserId) {
-    // ĐÃ SỬA LỖI: Thay connect_error bằng sự kiện tùy chỉnh 'auth_error'
+    // Sử dụng sự kiện tùy chỉnh 'auth_error'
     socket.emit("auth_error", {
       message: "Chưa đăng nhập. Truy cập bị từ chối.",
     });
@@ -518,13 +520,13 @@ io.on("connection", async (socket) => {
 
   // --- Xử lý tin nhắn 1-1 ---
   socket.on("privateMessage", async (msgData) => {
-    const { recipientId, content } = msgData;
+    const { recipientId, content, isEncrypted } = msgData;
 
     try {
       // 1. Lưu vào DB
       const [result] = await db.query(
-        "INSERT INTO messages (senderId, recipientId, content) VALUES (?, ?, ?)",
-        [myUserId, recipientId, content]
+        "INSERT INTO messages (senderId, recipientId, content, type) VALUES (?, ?, ?, ?)",
+        [myUserId, recipientId, content, 'text']
       );
 
       const newMsg = {
@@ -532,6 +534,7 @@ io.on("connection", async (socket) => {
         senderId: myUserId,
         recipientId: recipientId,
         content: content,
+        isEncrypted: isEncrypted || false,
         createdAt: new Date(),
       };
 
@@ -562,7 +565,7 @@ io.on("connection", async (socket) => {
   socket.on("loadPrivateHistory", async ({ recipientId }) => {
     try {
       const [messages] = await db.query(
-        `SELECT id, senderId, content, createdAt 
+        `SELECT id, senderId, content, createdAt, type 
          FROM messages 
          WHERE (senderId = ? AND recipientId = ?) OR (senderId = ? AND recipientId = ?) 
          ORDER BY createdAt ASC`,
@@ -577,7 +580,7 @@ io.on("connection", async (socket) => {
 
   // --- Xử lý tin nhắn nhóm ---
   socket.on("groupMessage", async (msgData) => {
-    const { groupId, content } = msgData;
+    const { groupId, content, isEncrypted } = msgData;
 
     try {
       // 1. Kiểm tra thành viên nhóm
@@ -594,8 +597,8 @@ io.on("connection", async (socket) => {
 
       // 2. Lưu vào DB
       const [result] = await db.query(
-        "INSERT INTO group_messages (groupId, senderId, content) VALUES (?, ?, ?)",
-        [groupId, myUserId, content]
+        "INSERT INTO group_messages (groupId, senderId, content, type) VALUES (?, ?, ?, ?)",
+        [groupId, myUserId, content, 'text']
       );
 
       const newMsg = {
@@ -604,6 +607,7 @@ io.on("connection", async (socket) => {
         senderId: myUserId,
         senderUsername: myUsername,
         content: content,
+        isEncrypted: isEncrypted || false,
         createdAt: new Date(),
       };
 
@@ -640,6 +644,7 @@ io.on("connection", async (socket) => {
           gm.groupId,
           gm.content,
           gm.createdAt,
+          gm.type,
           u.username AS senderUsername 
         FROM group_messages gm
         JOIN users u ON gm.senderId = u.id
@@ -651,6 +656,113 @@ io.on("connection", async (socket) => {
       socket.emit("groupHistory", { groupId, messages });
     } catch (err) {
       console.error("Lỗi khi tải lịch sử nhóm:", err);
+    }
+  });
+
+  // --- WebRTC Signaling ---
+  socket.on("webrtcSignal", (data) => {
+    const targetUser = onlineUsers[data.targetId];
+    if (targetUser) {
+      const targetSocket = io.sockets.sockets.get(targetUser.socketId);
+      if (targetSocket) {
+        targetSocket.emit("webrtcSignal", {
+          ...data,
+          senderId: myUserId
+        });
+      }
+    }
+  });
+
+  // --- File Messages (KHÔNG mã hóa) ---
+  socket.on("fileMessage", async (msgData) => {
+    const { recipientId, file, isImage } = msgData;
+    
+    try {
+      // Lưu thông tin file vào DB
+      const [result] = await db.query(
+        "INSERT INTO messages (senderId, recipientId, content, type) VALUES (?, ?, ?, ?)",
+        [myUserId, recipientId, JSON.stringify(file), isImage ? 'image' : 'file']
+      );
+
+      const newMsg = {
+        id: result.insertId,
+        senderId: myUserId,
+        recipientId: recipientId,
+        file: file,
+        isImage: isImage,
+        type: isImage ? 'image' : 'file',
+        createdAt: new Date(),
+        isEncrypted: false // File không mã hóa
+      };
+
+      // Gửi đến người nhận
+      const recipient = onlineUsers[recipientId];
+      if (recipient) {
+        const recipientSocket = io.sockets.sockets.get(recipient.socketId);
+        if (recipientSocket) {
+          recipientSocket.emit("fileMessage", newMsg);
+        }
+      }
+
+      // Gửi lại cho người gửi để hiển thị
+      socket.emit("fileMessage", newMsg);
+
+    } catch (err) {
+      console.error("Lỗi khi gửi file:", err);
+      socket.emit("error", "Không thể gửi file.");
+    }
+  });
+
+  // Group file messages (KHÔNG mã hóa)
+  socket.on("groupFileMessage", async (msgData) => {
+    const { groupId, file, isImage } = msgData;
+    
+    try {
+      // Kiểm tra thành viên nhóm
+      const [memberCheck] = await db.query(
+        "SELECT 1 FROM group_members WHERE groupId = ? AND userId = ?",
+        [groupId, myUserId]
+      );
+      if (memberCheck.length === 0) return;
+
+      // Lưu vào DB
+      const [result] = await db.query(
+        "INSERT INTO group_messages (groupId, senderId, content, type) VALUES (?, ?, ?, ?)",
+        [groupId, myUserId, JSON.stringify(file), isImage ? 'image' : 'file']
+      );
+
+      const newMsg = {
+        id: result.insertId,
+        groupId: groupId,
+        senderId: myUserId,
+        senderUsername: myUsername,
+        file: file,
+        isImage: isImage,
+        type: isImage ? 'image' : 'file',
+        createdAt: new Date(),
+        isEncrypted: false // File không mã hóa
+      };
+
+      // Gửi đến tất cả thành viên
+      const [members] = await db.query(
+        "SELECT userId FROM group_members WHERE groupId = ?",
+        [groupId]
+      );
+
+      members.forEach((member) => {
+        const memberId = member.userId;
+        const onlineMember = onlineUsers[memberId];
+        if (onlineMember) {
+          const memberSocket = io.sockets.sockets.get(onlineMember.socketId);
+          if (memberSocket) {
+            memberSocket.emit("groupFileMessage", newMsg);
+          }
+        }
+      });
+
+    } catch (err) {
+      console.error("Lỗi khi gửi file nhóm:", err);
+      socket.emit("error", "Không thể gửi file.");
     }
   });
 
@@ -668,4 +780,5 @@ io.on("connection", async (socket) => {
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
   console.log(`🚀 Server đang chạy trên cổng ${PORT}`);
+  console.log(`📱 Truy cập: http://localhost:${PORT}`);
 });
