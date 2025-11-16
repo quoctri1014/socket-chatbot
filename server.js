@@ -677,6 +677,8 @@ io.on("connection", async (socket) => {
   socket.on("fileMessage", async (msgData) => {
     const { recipientId, file, isImage } = msgData;
     
+    console.log(`📁 User ${myUserId} gửi file đến ${recipientId}:`, file.name, file.size);
+    
     try {
       // Lưu thông tin file vào DB
       const [result] = await db.query(
@@ -695,27 +697,35 @@ io.on("connection", async (socket) => {
         isEncrypted: false // File không mã hóa
       };
 
+      console.log(`✅ Đã lưu file vào DB:`, file.name);
+
       // Gửi đến người nhận
       const recipient = onlineUsers[recipientId];
       if (recipient) {
+        console.log(`📤 Gửi file đến user ${recipientId}`);
         const recipientSocket = io.sockets.sockets.get(recipient.socketId);
         if (recipientSocket) {
           recipientSocket.emit("fileMessage", newMsg);
         }
+      } else {
+        console.log(`❌ User ${recipientId} không online`);
       }
 
       // Gửi lại cho người gửi để hiển thị
       socket.emit("fileMessage", newMsg);
+      console.log(`✅ Đã gửi file thành công`);
 
     } catch (err) {
-      console.error("Lỗi khi gửi file:", err);
-      socket.emit("error", "Không thể gửi file.");
+      console.error('❌ Lỗi khi gửi file:', err);
+      socket.emit('error', 'Không thể gửi file.');
     }
   });
 
   // Group file messages (KHÔNG mã hóa)
   socket.on("groupFileMessage", async (msgData) => {
     const { groupId, file, isImage } = msgData;
+    
+    console.log(`📁 User ${myUserId} gửi file đến nhóm ${groupId}:`, file.name, file.size);
     
     try {
       // Kiểm tra thành viên nhóm
@@ -743,12 +753,15 @@ io.on("connection", async (socket) => {
         isEncrypted: false // File không mã hóa
       };
 
+      console.log(`✅ Đã lưu file nhóm vào DB:`, file.name);
+
       // Gửi đến tất cả thành viên
       const [members] = await db.query(
         "SELECT userId FROM group_members WHERE groupId = ?",
         [groupId]
       );
 
+      let sentCount = 0;
       members.forEach((member) => {
         const memberId = member.userId;
         const onlineMember = onlineUsers[memberId];
@@ -756,13 +769,16 @@ io.on("connection", async (socket) => {
           const memberSocket = io.sockets.sockets.get(onlineMember.socketId);
           if (memberSocket) {
             memberSocket.emit("groupFileMessage", newMsg);
+            sentCount++;
           }
         }
       });
 
+      console.log(`✅ Đã gửi file đến ${sentCount}/${members.length} thành viên`);
+
     } catch (err) {
-      console.error("Lỗi khi gửi file nhóm:", err);
-      socket.emit("error", "Không thể gửi file.");
+      console.error('❌ Lỗi khi gửi file nhóm:', err);
+      socket.emit('error', 'Không thể gửi file.');
     }
   });
 

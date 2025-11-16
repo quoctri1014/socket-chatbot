@@ -25,6 +25,7 @@ class EncryptionService {
                 // Export key để lưu
                 const exported = await crypto.subtle.exportKey('jwk', this.key);
                 localStorage.setItem('encryptionKey', JSON.stringify(exported));
+                console.log('✅ Đã tạo key mã hóa mới');
             } else {
                 // Import key từ localStorage
                 const keyData = JSON.parse(keyString);
@@ -35,6 +36,7 @@ class EncryptionService {
                     true,
                     ['encrypt', 'decrypt']
                 );
+                console.log('✅ Đã tải key mã hóa từ localStorage');
             }
             return true;
         } catch (error) {
@@ -135,6 +137,7 @@ class EncryptionService {
     clearKey() {
         localStorage.removeItem('encryptionKey');
         this.key = null;
+        console.log('✅ Đã xóa key mã hóa');
     }
 }
 

@@ -1,7 +1,7 @@
-// Tên file: public/main.js (PHIÊN BẢN HOÀN CHỈNH CUỐI CÙNG)
+// Tên file: public/main.js
 const path = window.location.pathname;
 
-// --- LOGIC TRANG ĐĂNG NHẬP / ĐĂNG KÝ (Giữ nguyên) ---
+// --- LOGIC TRANG ĐĂNG NHẬP / ĐĂNG KÝ ---
 if (path === '/' || path.endsWith('/index.html')) {
   const loginForm = document.getElementById('login-form');
   const loginError = document.getElementById('login-error');
@@ -56,7 +56,7 @@ if (path.endsWith('/register.html')) {
   }
 }
 
-// --- LOGIC TRANG CHAT (TÁI CẤU TRÚC HOÀN TOÀN) ---
+// --- LOGIC TRANG CHAT ---
 if (path.endsWith('/chat.html')) {
   const token = localStorage.getItem('token');
   if (!token) {
@@ -294,11 +294,21 @@ if (path.endsWith('/chat.html')) {
 
   // --- LOGIC SOCKET.IO (TRONG MAIN.JS) ---
 
+  // Kiểm tra kết nối socket
+  window.socket.on('connect', () => {
+    console.log('✅ Đã kết nối socket');
+  });
+
+  window.socket.on('disconnect', () => {
+    console.log('❌ Mất kết nối socket');
+  });
+
   // 1. Khi kết nối thành công và được 'welcome'
   window.socket.on('welcome', (data) => {
     window.myUserId = data.userId;
     window.myUsername = data.username;
     myUsernameSpan.textContent = `Xin chào, ${window.myUsername}`;
+    console.log('✅ Welcome:', data);
   });
 
   // 2. Nhận danh sách user
@@ -367,7 +377,9 @@ if (path.endsWith('/chat.html')) {
   window.socket.on('groupList', (groups) => {
     console.log('Đã nhận danh sách nhóm:', groups);
     window.allGroupsCache = groups;
-    window.renderGroupListFromCache();
+    if (window.renderGroupListFromCache) {
+      window.renderGroupListFromCache();
+    }
   });
 
   // 3. Nhận lịch sử chat 1-1 (ĐÃ SỬA LỖI ASYNC/AWAIT)
@@ -481,23 +493,56 @@ if (path.endsWith('/chat.html')) {
 
   // 7. Nhận file messages (KHÔNG mã hóa)
   window.socket.on('fileMessage', (msg) => {
+    console.log('📁 Nhận file message:', msg);
     if (window.currentChatContext.type === 'user' && 
         window.currentChatContext.id === msg.senderId) {
-        window.displayFileMessage(msg.file, false);
+        if (window.displayFileMessage) {
+          window.displayFileMessage(msg.file, false);
+        }
     } else {
         updateUnreadCount('user', msg.senderId);
+        // Hiển thị thông báo có file mới
+        showFileNotification(msg.senderId, msg.file.name);
     }
   });
 
   // 8. Nhận group file messages (KHÔNG mã hóa)
   window.socket.on('groupFileMessage', (msg) => {
+    console.log('📁 Nhận group file message:', msg);
     if (window.currentChatContext.type === 'group' && 
         window.currentChatContext.id === msg.groupId) {
-        window.displayFileMessage(msg.file, false);
+        if (window.displayFileMessage) {
+          window.displayFileMessage(msg.file, false);
+        }
     } else {
         updateUnreadCount('group', msg.groupId);
+        // Hiển thị thông báo có file mới
+        showFileNotification(msg.groupId, msg.file.name, true);
     }
   });
+
+  /**
+   * Hiển thị thông báo file mới
+   */
+  function showFileNotification(chatId, fileName, isGroup = false) {
+    const chatName = isGroup 
+      ? window.allGroupsCache.find(g => g.id === chatId)?.name 
+      : window.allUsersCache[chatId]?.username;
+    
+    if (chatName) {
+      const notification = document.createElement('div');
+      notification.className = 'file-notification';
+      notification.innerHTML = `
+        <strong>${chatName}</strong> đã gửi một file:<br>
+        <small>${fileName}</small>
+      `;
+      document.body.appendChild(notification);
+      
+      setTimeout(() => {
+        notification.remove();
+      }, 5000);
+    }
+  }
 
   // 9. GỬI TIN NHẮN VĂN BẢN (Có mã hóa nếu bật)
   chatForm.addEventListener('submit', async (e) => {
@@ -575,7 +620,7 @@ if (path.endsWith('/chat.html')) {
 
   // Xử lý lỗi Socket
   window.socket.on('connect_error', (err) => {
-      console.error(err.message);
+      console.error('Socket connect error:', err.message);
       if (err.message.includes('Xác thực thất bại')) {
           alert('Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại.');
           localStorage.removeItem('token');

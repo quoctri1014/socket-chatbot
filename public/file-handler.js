@@ -12,6 +12,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const messageInput = document.getElementById('message-input');
 
         let selectedFiles = [];
+        let isEmojiPickerVisible = false;
 
         // Mở modal file
         attachButton.addEventListener('click', () => {
@@ -56,9 +57,9 @@ document.addEventListener('DOMContentLoaded', () => {
                         name: file.name,
                         type: file.type,
                         size: file.size,
-                        data: e.target.result, // base64 data
+                        data: e.target.result,
                         timestamp: new Date().toISOString(),
-                        isEncrypted: false // Đánh dấu file không mã hóa
+                        isEncrypted: false
                     };
 
                     const context = window.currentChatContext;
@@ -128,33 +129,53 @@ document.addEventListener('DOMContentLoaded', () => {
             return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
         }
 
-        // --- EMOJI PICKER ---
-        let isEmojiPickerVisible = false;
-
-        // Toggle emoji picker
+        // --- EMOJI PICKER FIXED ---
+        
+        // Toggle emoji picker - SỬA LỖI Ở ĐÂY
         const emojiButton = document.querySelector('.emoji-button');
+        
         emojiButton.addEventListener('click', (e) => {
             e.preventDefault();
+            e.stopPropagation(); // Quan trọng: ngăn sự kiện lan ra ngoài
+            
             isEmojiPickerVisible = !isEmojiPickerVisible;
             emojiPicker.classList.toggle('hidden', !isEmojiPickerVisible);
+            
+            console.log('Emoji picker visible:', isEmojiPickerVisible);
         });
 
         // Chọn emoji
         emojiPicker.querySelectorAll('.emoji-grid span').forEach(emoji => {
-            emoji.addEventListener('click', () => {
-                messageInput.value += emoji.textContent;
+            emoji.addEventListener('click', (e) => {
+                e.stopPropagation(); // Quan trọng: ngăn sự kiện lan ra ngoài
+                
+                const emojiChar = emoji.textContent;
+                messageInput.value += emojiChar;
                 messageInput.focus();
+                
+                // Đóng emoji picker sau khi chọn
                 emojiPicker.classList.add('hidden');
                 isEmojiPickerVisible = false;
+                
+                console.log('Đã chọn emoji:', emojiChar);
             });
         });
 
         // Đóng emoji picker khi click ra ngoài
         document.addEventListener('click', (e) => {
-            if (!emojiPicker.contains(e.target) && !emojiButton.contains(e.target)) {
+            if (isEmojiPickerVisible && 
+                !emojiPicker.contains(e.target) && 
+                !emojiButton.contains(e.target)) {
+                
                 emojiPicker.classList.add('hidden');
                 isEmojiPickerVisible = false;
+                console.log('Đóng emoji picker do click outside');
             }
+        });
+
+        // Ngăn click inside emoji picker đóng nó
+        emojiPicker.addEventListener('click', (e) => {
+            e.stopPropagation(); // Quan trọng
         });
 
         // Xử lý nhận file message từ server
