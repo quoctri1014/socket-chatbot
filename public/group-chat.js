@@ -167,6 +167,17 @@ document.addEventListener('DOMContentLoaded', () => {
                     throw new Error(data.message);
                 }
                 
-               
+                // Thành công!
+                modal.classList.add('hidden');
+                groupNameInput.value = '';
+                
+                // Không cần làm gì thêm. Server sẽ tự động gửi sự kiện 'newGroupAdded'
+                // và socket listener (ở trên) sẽ bắt được và cập nhật UI.
+                
+            } catch (error) {
+                alert(`Lỗi khi tạo nhóm: ${error.message}`);
+            }
+        });
+
     } // end if chat.html
 }); // end DOMContentLoaded

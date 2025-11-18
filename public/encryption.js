@@ -117,7 +117,19 @@ class EncryptionService {
             // Kiểm tra xem có phải base64 không
             if (!data || typeof data !== 'string') return false;
             
-           
+            // Base64 thường kết thúc bằng = và chỉ chứa ký tự base64
+            if (!data.match(/^[A-Za-z0-9+/]*={0,2}$/)) return false;
+            
+            const combined = new Uint8Array(
+                atob(data).split('').map(char => char.charCodeAt(0))
+            );
+            
+            // Dữ liệu mã hóa AES-GCM cần có ít nhất 12 byte IV + 1 byte data
+            return combined.length >= 13;
+        } catch {
+            return false;
+        }
+    }
 
     /**
      * Xóa key mã hóa (để reset)
