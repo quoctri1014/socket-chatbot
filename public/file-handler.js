@@ -153,14 +153,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 messageInput.value += emojiChar;
                 messageInput.focus();
                 
-                // Đóng emoji picker sau khi chọn
-                emojiPicker.classList.add('hidden');
-                isEmojiPickerVisible = false;
                 
-                console.log('Đã chọn emoji:', emojiChar);
-            });
-        });
-
         // Đóng emoji picker khi click ra ngoài
         document.addEventListener('click', (e) => {
             if (isEmojiPickerVisible && 
