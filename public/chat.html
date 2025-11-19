@@ -15,7 +15,6 @@
                 <h3 id="my-username">Đang tải...</h3>
                 <div id="header-buttons">
                     <button id="theme-toggle" title="Chuyển chế độ">🌙</button>
-                    <button id="encryption-toggle" title="Mã hóa đang tắt">🔓</button>
                     <button id="logout-button">Đăng xuất</button>
                 </div>
             </div>
@@ -62,14 +61,12 @@
             <div id="typing-indicator" class="hidden">Người kia đang gõ...</div>
             <form id="chat-form">
                 <button type="button" id="attach-button" title="Đính kèm file">+</button>
-                <button type="button" class="emoji-button" title="Chèn emoji">😀</button>
                 <input id="message-input" autocomplete="off" placeholder="Chọn một người để nhắn tin..." disabled/>
                 <button type="submit" disabled>Gửi</button>
             </form>
         </div>
     </div>
 
-    <!-- Modal tạo nhóm -->
     <div id="create-group-modal" class="modal-backdrop hidden">
         <div class="modal-content">
             <h2>Tạo Nhóm Mới</h2>
@@ -83,64 +80,8 @@
         </div>
     </div>
 
-    <!-- Modal WebRTC -->
-    <div id="call-modal" class="modal-backdrop hidden">
-        <div class="modal-content call-modal">
-            <h2 id="call-status">Đang kết nối...</h2>
-            
-            <div class="video-container">
-                <video id="remote-video" autoplay playsinline></video>
-                <video id="local-video" autoplay playsinline muted></video>
-            </div>
-            
-            <div class="call-controls">
-                <button id="toggle-mic-button" class="control-btn hidden" title="Tắt mic">
-                    <i class="fas fa-microphone"></i>
-                </button>
-                <button id="toggle-camera-button" class="control-btn hidden" title="Tắt camera">
-                    <i class="fas fa-video"></i>
-                </button>
-                <button id="hangup-button" class="control-btn hangup" title="Kết thúc">
-                    <i class="fas fa-phone-slash"></i>
-                </button>
-                <button id="answer-call-button" class="control-btn answer hidden" title="Trả lời">
-                    <i class="fas fa-phone"></i>
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Modal đính kèm file -->
-    <div id="file-modal" class="modal-backdrop hidden">
-        <div class="modal-content">
-            <h2>Đính kèm File</h2>
-            <input type="file" id="file-input" multiple>
-            <div class="modal-actions">
-                <button id="cancel-file">Hủy</button>
-                <button id="send-file">Gửi</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Emoji picker -->
-    <div id="emoji-picker" class="emoji-picker hidden">
-        <div class="emoji-grid">
-            <span>😀</span><span>😂</span><span>😍</span><span>😊</span><span>🤔</span>
-            <span>👍</span><span>❤️</span><span>🎉</span><span>🔥</span><span>⭐</span>
-            <span>😎</span><span>😢</span><span>😡</span><span>🤯</span><span>🥳</span>
-        </div>
-    </div>
-
-    <!-- Encryption status -->
-    <div id="encryption-status" class="encryption-status hidden">
-        <span>🔒 Mã hóa đang bật</span>
-    </div>
-
     <script src="/socket.io/socket.io.js"></script>
     <script src="main.js"></script> 
     <script src="group-chat.js"></script> 
-    <script src="webrtc.js"></script>
-    <script src="file-handler.js"></script>
-    <script src="encryption.js"></script>
 </body> 
 </html>

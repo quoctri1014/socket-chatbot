@@ -1,7 +1,7 @@
-// Tên file: public/main.js
+// Tên file: public/main.js (PHIÊN BẢN HOÀN CHỈNH CUỐI CÙNG)
 const path = window.location.pathname;
 
-// --- LOGIC TRANG ĐĂNG NHẬP / ĐĂNG KÝ ---
+// --- LOGIC TRANG ĐĂNG NHẬP / ĐĂNG KÝ (Giữ nguyên) ---
 if (path === '/' || path.endsWith('/index.html')) {
   const loginForm = document.getElementById('login-form');
   const loginError = document.getElementById('login-error');
@@ -56,11 +56,11 @@ if (path.endsWith('/register.html')) {
   }
 }
 
-// --- LOGIC TRANG CHAT ---
+// --- LOGIC TRANG CHAT (TÁI CẤU TRÚC HOÀN TOÀN) ---
 if (path.endsWith('/chat.html')) {
   const token = localStorage.getItem('token');
   if (!token) {
-    window.location.href = '/index.html';
+    window.location.href = '/index.html'; // Đẩy về trang đăng nhập
   }
 
   // --- BIẾN TOÀN CỤC ---
@@ -69,10 +69,11 @@ if (path.endsWith('/chat.html')) {
   window.myUsername = null;
   
   // Cache dữ liệu
-  window.allUsersCache = {};
-  window.allGroupsCache = [];
+  window.allUsersCache = {}; // Dùng object để truy cập nhanh bằng userId
+  window.allGroupsCache = []; // Dùng array
 
   // Quản lý bối cảnh chat hiện tại
+  // context: { type: 'user' | 'group', id: Number, name: String }
   window.currentChatContext = { type: null, id: null, name: null };
 
   // --- DOM Elements Toàn Cục ---
@@ -82,21 +83,56 @@ if (path.endsWith('/chat.html')) {
   const chatForm = document.getElementById('chat-form');
   const messageInput = document.getElementById('message-input');
   const sendButton = chatForm.querySelector('button[type="submit"]');
+  const typingIndicator = document.getElementById('typing-indicator'); // (GĐ 2)
   const logoutButton = document.getElementById('logout-button');
   const myUsernameSpan = document.getElementById('my-username');
   const searchInput = document.getElementById('search-input');
   const themeToggle = document.getElementById('theme-toggle');
-  const encryptionToggle = document.getElementById('encryption-toggle');
   const body = document.body;
 
   // --- LOGIC CHUNG (TAB, THEME, LOGOUT) ---
 
-  messageInput.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault();
-        chatForm.requestSubmit(); 
-      }
-    });  
+  // (GIAI ĐOẠN 2) Logic Typing Indicator
+  let typingTimer;
+  messageInput.addEventListener('input', () => {
+    // Chỉ gửi khi đang chat 1-1 với người dùng khác
+    if (window.currentChatContext.type === 'user' && window.currentChatContext.id !== 0) {
+      // Gửi sự kiện 'typing' ngay lập tức
+      window.socket.emit('typing', { recipientId: window.currentChatContext.id });
+
+      // Đặt lại bộ đếm thời gian
+      clearTimeout(typingTimer);
+      typingTimer = setTimeout(() => {
+        window.socket.emit('stopTyping', { recipientId: window.currentChatContext.id });
+      }, 2000); // Gửi 'stopTyping' sau 2 giây không gõ
+    }
+  });
+
+  // Lắng nghe sự kiện 'typing' từ người khác
+  window.socket.on('typing', ({ senderId }) => {
+    if (window.currentChatContext.type === 'user' && window.currentChatContext.id === senderId) {
+      typingIndicator.textContent = `${window.currentChatContext.name} đang gõ...`;
+      typingIndicator.classList.remove('hidden');
+    }
+  });
+
+  window.socket.on('stopTyping', ({ senderId }) => {
+    if (window.currentChatContext.type === 'user' && window.currentChatContext.id === senderId) {
+      typingIndicator.classList.add('hidden');
+    }
+  });
+
+    messageInput.addEventListener('keydown', (e) => {
+        // 1. Kiểm tra xem phím nhấn có phải là 'Enter' VÀ không giữ phím 'Shift'
+        if (e.key === 'Enter' && !e.shiftKey) {
+          // 2. Ngăn hành vi mặc định (là xuống dòng)
+          e.preventDefault();
+          
+          // 3. Kích hoạt sự kiện submit của form
+          // (Cách này giống hệt như khi bạn bấm nút "Gửi")
+          chatForm.requestSubmit(); 
+        }
+      });  
 
   // 1. Logic Theme (Sáng/Tối)
   function applySavedTheme() {
@@ -114,54 +150,14 @@ if (path.endsWith('/chat.html')) {
   });
   applySavedTheme();
 
-  // 2. Logic Encryption
-  function initializeEncryption() {
-    const useEncryption = localStorage.getItem('useEncryption') === 'true';
-    encryptionToggle.innerHTML = useEncryption ? '🔒' : '🔓';
-    encryptionToggle.title = useEncryption ? 'Mã hóa đang bật' : 'Mã hóa đang tắt';
-    
-    // Hiển thị thông báo
-    const encryptionStatus = document.getElementById('encryption-status');
-    if (useEncryption) {
-        encryptionStatus.classList.remove('hidden');
-        setTimeout(() => {
-            encryptionStatus.classList.add('hidden');
-        }, 3000);
-    } else {
-        encryptionStatus.classList.add('hidden');
-    }
-  }
-  
-  encryptionToggle.addEventListener('click', () => {
-    const useEncryption = localStorage.getItem('useEncryption') !== 'true';
-    localStorage.setItem('useEncryption', useEncryption);
-    
-    encryptionToggle.innerHTML = useEncryption ? '🔒' : '🔓';
-    encryptionToggle.title = useEncryption ? 'Mã hóa đang bật' : 'Mã hóa đang tắt';
-    
-    // Hiển thị thông báo
-    const encryptionStatus = document.getElementById('encryption-status');
-    if (useEncryption) {
-        encryptionStatus.classList.remove('hidden');
-        setTimeout(() => {
-            encryptionStatus.classList.add('hidden');
-        }, 3000);
-    } else {
-        encryptionStatus.classList.add('hidden');
-    }
-    
-    alert(`Mã hóa end-to-end ${useEncryption ? 'đã bật' : 'đã tắt'}\n\nLưu ý: Mã hóa chỉ áp dụng cho tin nhắn văn bản, không áp dụng cho file.`);
-  });
-  initializeEncryption();
-
-  // 3. Logic Đăng xuất
+  // 2. Logic Đăng xuất
   logoutButton.addEventListener('click', () => {
     localStorage.removeItem('token');
     window.socket.disconnect();
     window.location.href = '/index.html';
   });
 
-  // 4. Logic chuyển Tab (User/Group)
+  // 3. Logic chuyển Tab (User/Group) - ĐÃ SỬA LỖI MẤT DANH SÁCH
   const tabs = document.querySelectorAll('.sidebar-tab');
   
   tabs.forEach(tab => {
@@ -169,8 +165,9 @@ if (path.endsWith('/chat.html')) {
       tabs.forEach(t => t.classList.remove('active'));
       tab.classList.add('active');
       
-      const tabName = tab.dataset.tab;
+      const tabName = tab.dataset.tab; // 'users' hoặc 'groups'
       
+      // Lấy danh sách content MỚI NHẤT (Sửa lỗi)
       const tabContents = document.querySelectorAll('.tab-content'); 
 
       tabContents.forEach(content => {
@@ -181,20 +178,18 @@ if (path.endsWith('/chat.html')) {
         }
       });
 
-      if (tabName === 'groups') {
-         window.socket.emit('loadGroups');
-      }
     });
   });
 
   // --- CÁC HÀM TIỆN ÍCH TOÀN CỤC ---
 
-  // Hàm kích hoạt cửa sổ chat
+  // (MỚI) Hàm kích hoạt cửa sổ chat (dùng cho cả User và Group)
   window.activateChat = (context) => {
     window.currentChatContext = context;
-    window.messagesContainer.innerHTML = '';
+    window.messagesContainer.innerHTML = ''; // Xóa tin nhắn cũ
+    typingIndicator.classList.add('hidden'); // (GĐ 2) Ẩn chỉ báo typing khi đổi chat
     clearUnreadCount(context.type, context.id);
-    
+    // Cập nhật header
     chatHeader.textContent = context.name;
 
     // Kích hoạt form
@@ -213,16 +208,19 @@ if (path.endsWith('/chat.html')) {
         const activeUserItem = userListDiv.querySelector(`[data-user-id="${context.id}"]`);
         if (activeUserItem) activeUserItem.classList.add('active');
     } else {
+        // Hàm này sẽ được gọi từ group-chat.js
         window.highlightGroupItem(context.id); 
     }
   };
 
-  // Hàm hiển thị tin nhắn
+  // (MỚI) Hàm hiển thị tin nhắn (dùng cho cả 2 loại)
   window.displayMessage = (msgData, senderType) => {
+    // msgData: { senderUsername, content, createdAt }
     const item = document.createElement('div');
-    item.classList.add('message', senderType);
+    item.classList.add('message', senderType); // 'user' (mình) hoặc 'other'
 
-    if (window.currentChatContext.type === 'group' && senderType === 'recipient') {
+    // (MỚI) Thêm tên người gửi (chỉ cho tin nhắn nhóm và là của 'other')
+    if (window.currentChatContext.type === 'group' && senderType === 'other') {
         const senderName = document.createElement('div');
         senderName.classList.add('message-sender');
         senderName.textContent = msgData.senderUsername || '...';
@@ -247,39 +245,47 @@ if (path.endsWith('/chat.html')) {
     window.messagesContainer.appendChild(item);
     window.messagesContainer.scrollTop = window.messagesContainer.scrollHeight;
   }
-
   /**
-   * Cập nhật số tin nhắn chưa đọc
+   * Cập nhật (tăng) số tin nhắn chưa đọc
+   * @param {string} type - 'user' hoặc 'group'
+   * @param {number} id - ID của user hoặc group
    */
   function updateUnreadCount(type, id) {
-    const selector = type === 'user' 
+    const selector = (type === 'user') 
+      // Dùng querySelector cho #user-list bên trong main.js
       ? `#user-list .user-item[data-user-id="${id}"]` 
-      : `#group-list .group-item[data-group-id="${id}"]`;
+      // Giả sử group-list cũng có cấu trúc tương tự
+      : `#groups-list-container .group-item[data-group-id="${id}"]`;
     
+    // Dùng document.querySelector vì item có thể ở tab không active
     const chatItem = document.querySelector(selector);
     
     if (chatItem) {
       let badge = chatItem.querySelector('.unread-badge');
       
+      // Nếu chưa có badge, tạo mới
       if (!badge) {
         badge = document.createElement('span');
         badge.classList.add('unread-badge');
         chatItem.appendChild(badge);
       }
       
+      // Tăng số đếm
       const currentCount = parseInt(badge.textContent || '0');
       badge.textContent = currentCount + 1;
-      badge.style.display = 'block';
+      badge.style.display = 'block'; // Hiển thị badge
     }
   }
 
   /**
-   * Xóa số tin nhắn chưa đọc
+   * Xóa (reset) số tin nhắn chưa đọc
+   * @param {string} type - 'user' hoặc 'group'
+   * @param {number} id - ID của user hoặc group
    */
   function clearUnreadCount(type, id) {
-    const selector = type === 'user' 
+    const selector = (type === 'user') 
       ? `#user-list .user-item[data-user-id="${id}"]` 
-      : `#group-list .group-item[data-group-id="${id}"]`;
+      : `#groups-list-container .group-item[data-group-id="${id}"]`;
 
     const chatItem = document.querySelector(selector);
     
@@ -287,46 +293,33 @@ if (path.endsWith('/chat.html')) {
       const badge = chatItem.querySelector('.unread-badge');
       if (badge) {
         badge.textContent = '0';
-        badge.style.display = 'none';
+        badge.style.display = 'none'; // Ẩn badge đi
       }
     }
   }
 
   // --- LOGIC SOCKET.IO (TRONG MAIN.JS) ---
 
-  // Kiểm tra kết nối socket
-  window.socket.on('connect', () => {
-    console.log('✅ Đã kết nối socket');
-  });
-
-  window.socket.on('disconnect', () => {
-    console.log('❌ Mất kết nối socket');
-  });
-
   // 1. Khi kết nối thành công và được 'welcome'
   window.socket.on('welcome', (data) => {
     window.myUserId = data.userId;
     window.myUsername = data.username;
     myUsernameSpan.textContent = `Xin chào, ${window.myUsername}`;
-    console.log('✅ Welcome:', data);
   });
 
-  // 2. Nhận danh sách user
+  // 2. Nhận danh sách user (cả online/offline) - ĐÃ CÓ AI
   window.socket.on('userList', (users) => {
     userListDiv.innerHTML = '';
-    window.allUsersCache = {};
+    window.allUsersCache = {}; // Xây dựng lại cache
     
+    // Sắp xếp: online lên trước, rồi theo tên
     users.sort((a, b) => {
         if (a.online !== b.online) return a.online ? -1 : 1;
         return a.username.localeCompare(b.username);
     });
 
     users.forEach(user => {
-      window.allUsersCache[user.userId] = user;
-
-      if (user.userId === window.myUserId) {
-        return;
-      }
+      window.allUsersCache[user.userId] = user; // Thêm vào cache
       
       const userItem = document.createElement('div');
       userItem.className = 'user-item';
@@ -334,8 +327,10 @@ if (path.endsWith('/chat.html')) {
       
       const avatar = document.createElement('div');
       avatar.className = 'user-avatar';
+      // Nếu là AI (id=0), hiển thị icon robot, ngược lại hiển thị chữ cái
       avatar.textContent = (user.userId === 0) ? '🤖' : user.username.charAt(0).toUpperCase();
 
+      // Thêm chấm trạng thái
       const statusDot = document.createElement('div');
       statusDot.className = `status-dot ${user.online ? 'online' : 'offline'}`;
       avatar.appendChild(statusDot);
@@ -348,6 +343,7 @@ if (path.endsWith('/chat.html')) {
       
       const userPreview = document.createElement('div');
       userPreview.className = 'user-preview';
+      // Nếu là AI, hiển thị mô tả, ngược lại hiển thị trạng thái
       userPreview.textContent = (user.userId === 0) ? 'Trợ lý AI' : (user.online ? 'Đang hoạt động' : 'Offline');
       
       userInfo.appendChild(userName);
@@ -355,6 +351,7 @@ if (path.endsWith('/chat.html')) {
       userItem.appendChild(avatar);
       userItem.appendChild(userInfo);
       
+      // Cập nhật click handler
       userItem.onclick = () => {
         const newContext = { 
             type: 'user', 
@@ -362,245 +359,143 @@ if (path.endsWith('/chat.html')) {
             name: user.username 
         };
         window.activateChat(newContext);
-        window.socket.emit('loadPrivateHistory', { recipientId: user.userId });
+        
+        // (SỬA) Phân biệt rạch ròi việc tải lịch sử
+        if (user.userId === 0) {
+          window.socket.emit('loadAIHistory'); // Sự kiện mới cho AI
+        } else {
+          window.socket.emit('loadPrivateHistory', { recipientId: user.userId }); // Sự kiện cũ cho người dùng
+        }
       };
 
       userListDiv.appendChild(userItem);
     });
     
+    // Kích hoạt lại chat nếu đang active
     if (window.currentChatContext.type === 'user') {
         const activeUserItem = userListDiv.querySelector(`[data-user-id="${window.currentChatContext.id}"]`);
         if (activeUserItem) activeUserItem.classList.add('active');
     }
   });
 
+  // 3. Nhận danh sách NHÓM
   window.socket.on('groupList', (groups) => {
-    console.log('Đã nhận danh sách nhóm:', groups);
-    window.allGroupsCache = groups;
-    if (window.renderGroupListFromCache) {
-      window.renderGroupListFromCache();
-    }
+    window.allGroupsCache = groups; // Lưu vào cache
+    window.renderGroupListFromCache(); // Gọi hàm render (từ group-chat.js)
   });
 
-  // 3. Nhận lịch sử chat 1-1 (ĐÃ SỬA LỖI ASYNC/AWAIT)
-  window.socket.on('privateHistory', async ({ recipientId, messages }) => {
+  // 3. Nhận lịch sử chat 1-1 (hoạt động cho cả AI)
+  window.socket.on('privateHistory', ({ recipientId, messages }) => {
+    // Chỉ hiển thị nếu đang chat với đúng người (hoặc AI)
     if (window.currentChatContext.type === 'user' && window.currentChatContext.id === recipientId) {
       window.messagesContainer.innerHTML = '';
-      
-      for (const msg of messages) {
-        const useEncryption = localStorage.getItem('useEncryption') === 'true';
-        let content = msg.content;
-        
-        // Giải mã nếu tin nhắn được mã hóa
-        if (useEncryption && window.encryptionService && window.encryptionService.isEncrypted(content)) {
-          try {
-            content = await window.encryptionService.decryptMessage(content);
-          } catch (error) {
-            console.error('Lỗi giải mã:', error);
-            content = '[Không thể giải mã tin nhắn]';
-          }
-        }
-        
-        const senderType = (msg.senderId === window.myUserId) ? 'user' : 'recipient';
+      messages.forEach(msg => {
+        // Nếu senderId = 0 (AI) hoặc khác myUserId -> 'other'
+        const senderType = (msg.senderId === window.myUserId) ? 'user' : 'other';
         window.displayMessage({
-            senderUsername: null,
-            content: content,
+            senderUsername: null, // Không cần cho chat 1-1
+            content: msg.content,
             createdAt: msg.createdAt
         }, senderType);
-      }
+      });
     }
   });
 
-  // 4. Nhận tin nhắn 1-1 mới
-  window.socket.on('newMessage', async (msg) => {
+  // 4. Nhận tin nhắn 1-1 mới (hoạt động cho cả AI)
+  window.socket.on('newMessage', (msg) => {
+    // Chỉ hiển thị nếu đang chat với người gửi (hoặc AI)
     if (window.currentChatContext.type === 'user' && window.currentChatContext.id === msg.senderId) {
-      const useEncryption = localStorage.getItem('useEncryption') === 'true';
-      let content = msg.content;
-      
-      // Giải mã nếu tin nhắn được mã hóa
-      if (useEncryption && msg.isEncrypted && window.encryptionService && window.encryptionService.isEncrypted(content)) {
-        try {
-          content = await window.encryptionService.decryptMessage(content);
-        } catch (error) {
-          console.error('Lỗi giải mã:', error);
-          content = '[Không thể giải mã tin nhắn]';
-        }
-      }
-      
       window.displayMessage({
           senderUsername: null,
-          content: content,
+          content: msg.content,
           createdAt: msg.createdAt
-      }, 'recipient');
+      }, 'other'); // Tin nhắn mới 'newMessage' luôn là 'other'
     } else {
       updateUnreadCount('user', msg.senderId);
     }
   });
 
-  // 5. Nhận lịch sử chat NHÓM (ĐÃ SỬA LỖI ASYNC/AWAIT)
-  window.socket.on('groupHistory', async ({ groupId, messages }) => {
+  // 5. Nhận lịch sử chat NHÓM
+ window.socket.on('groupHistory', ({ groupId, messages }) => {
+    // Chỉ hiển thị nếu đang chat với đúng nhóm
     if (window.currentChatContext.type === 'group' && window.currentChatContext.id === groupId) {
       window.messagesContainer.innerHTML = '';
-      
-      for (const msg of messages) {
-        const useEncryption = localStorage.getItem('useEncryption') === 'true';
-        let content = msg.content;
-        
-        if (useEncryption && window.encryptionService && window.encryptionService.isEncrypted(content)) {
-          try {
-            content = await window.encryptionService.decryptMessage(content);
-          } catch (error) {
-            console.error('Lỗi giải mã:', error);
-            content = '[Không thể giải mã tin nhắn]';
-          }
-        }
-        
-        const senderType = msg.senderId === window.myUserId ? 'user' : 'recipient';
+      messages.forEach(msg => {
+        const senderType = msg.senderId === window.myUserId ? 'user' : 'other';
         window.displayMessage({
           senderUsername: msg.senderUsername,
-          content: content,
+          content: msg.content,
           createdAt: msg.createdAt
         }, senderType);
-      }
+      });
     }
+    // ĐÃ XÓA DÒNG LỖI "messagesDiv.scrollTop"
   });
 
   // 6. Nhận tin nhắn NHÓM mới
-  window.socket.on('newGroupMessage', async (msg) => {
+window.socket.on('newGroupMessage', (msg) => {
+    // Chỉ hiển thị nếu đang chat với đúng nhóm
     if (window.currentChatContext.type === 'group' && window.currentChatContext.id === msg.groupId) {
-      const useEncryption = localStorage.getItem('useEncryption') === 'true';
-      let content = msg.content;
-      
-      if (useEncryption && msg.isEncrypted && window.encryptionService && window.encryptionService.isEncrypted(content)) {
-        try {
-          content = await window.encryptionService.decryptMessage(content);
-        } catch (error) {
-          console.error('Lỗi giải mã:', error);
-          content = '[Không thể giải mã tin nhắn]';
-        }
-      }
-      
-      const senderType = msg.senderId === window.myUserId ? 'user' : 'recipient';
+      const senderType = msg.senderId === window.myUserId ? 'user' : 'other';
       window.displayMessage({
         senderUsername: msg.senderUsername,
-        content: content,
+        content: msg.content,
         createdAt: msg.createdAt
       }, senderType);
     } else {
+      // (Nên thêm: thông báo)
       updateUnreadCount('group', msg.groupId);
     }
+    // (ĐÃ XÓA DÒNG LỖI "messagesDiv.scrollTop")
   });
 
-  // 7. Nhận file messages (KHÔNG mã hóa)
-  window.socket.on('fileMessage', (msg) => {
-    console.log('📁 Nhận file message:', msg);
-    if (window.currentChatContext.type === 'user' && 
-        window.currentChatContext.id === msg.senderId) {
-        if (window.displayFileMessage) {
-          window.displayFileMessage(msg.file, false);
-        }
-    } else {
-        updateUnreadCount('user', msg.senderId);
-        // Hiển thị thông báo có file mới
-        showFileNotification(msg.senderId, msg.file.name);
-    }
-  });
-
-  // 8. Nhận group file messages (KHÔNG mã hóa)
-  window.socket.on('groupFileMessage', (msg) => {
-    console.log('📁 Nhận group file message:', msg);
-    if (window.currentChatContext.type === 'group' && 
-        window.currentChatContext.id === msg.groupId) {
-        if (window.displayFileMessage) {
-          window.displayFileMessage(msg.file, false);
-        }
-    } else {
-        updateUnreadCount('group', msg.groupId);
-        // Hiển thị thông báo có file mới
-        showFileNotification(msg.groupId, msg.file.name, true);
-    }
-  });
-
-  /**
-   * Hiển thị thông báo file mới
-   */
-  function showFileNotification(chatId, fileName, isGroup = false) {
-    const chatName = isGroup 
-      ? window.allGroupsCache.find(g => g.id === chatId)?.name 
-      : window.allUsersCache[chatId]?.username;
-    
-    if (chatName) {
-      const notification = document.createElement('div');
-      notification.className = 'file-notification';
-      notification.innerHTML = `
-        <strong>${chatName}</strong> đã gửi một file:<br>
-        <small>${fileName}</small>
-      `;
-      document.body.appendChild(notification);
-      
-      setTimeout(() => {
-        notification.remove();
-      }, 5000);
-    }
-  }
-
-  // 9. GỬI TIN NHẮN VĂN BẢN (Có mã hóa nếu bật)
-  chatForm.addEventListener('submit', async (e) => {
+  // 7. GỬI TIN NHẮN (Handler tổng)
+  chatForm.addEventListener('submit', (e) => {
     e.preventDefault();
-    let msg = messageInput.value.trim();
+    const msg = messageInput.value.trim();
     
-    if (!msg || window.currentChatContext.id === null) {
-      return;
+    if (!msg || window.currentChatContext.id === null) { // Sửa: check id không phải null
+      return; // Không gửi nếu rỗng hoặc chưa chọn ai
     }
     
     const context = window.currentChatContext;
 
-    // Mã hóa tin nhắn văn bản nếu encryption được bật
-    const useEncryption = localStorage.getItem('useEncryption') === 'true';
-    let encryptedMsg = msg;
-    
-    if (useEncryption && window.encryptionService) {
-      try {
-        encryptedMsg = await window.encryptionService.encryptMessage(msg);
-      } catch (error) {
-        console.error('Lỗi mã hóa:', error);
-        // Nếu mã hóa thất bại, gửi tin nhắn không mã hóa
-        encryptedMsg = msg;
-      }
-    }
-
-    // Hiển thị tin nhắn (giải mã để hiển thị nếu đã mã hóa)
-    let displayMsg = msg;
-
+    // Hiển thị tin nhắn của MÌNH lên trước
     window.displayMessage({
         senderUsername: window.myUsername,
-        content: displayMsg,
-        createdAt: new Date(),
-        isEncrypted: useEncryption
+        content: msg,
+        createdAt: new Date()
     }, 'user');
 
-    // Gửi đi
-    if (context.type === 'user') {
+    // Gửi đi theo đúng context
+    if (context.type === 'user') { // Nếu là chat 1-1
+      // Phân biệt giữa chat với AI và người dùng thường
+      if (context.id === 0) {
+        // Gửi sự kiện chuyên biệt cho AI
+        window.socket.emit('chatWithAI', { content: msg });
+      } else {
+        // Gửi tin nhắn riêng cho người dùng khác
         window.socket.emit('privateMessage', {
-            recipientId: context.id,
-            content: encryptedMsg,
-            isEncrypted: useEncryption
+          recipientId: context.id,
+          content: msg
         });
-    } else if (context.type === 'group') {
-        window.socket.emit('groupMessage', {
-            groupId: context.id,
-            content: encryptedMsg,
-            isEncrypted: useEncryption
-        });
+      }
+    } else if (context.type === 'group') { // Nếu là chat nhóm
+      window.socket.emit('groupMessage', {
+        groupId: context.id,
+        content: msg
+      });
     }
     
     messageInput.value = '';
+    messageInput.focus(); // (CẢI TIẾN) Tự động focus lại vào ô chat
   });
 
-  // 10. Logic tìm kiếm
+  // 8. Logic tìm kiếm (Đơn giản) - ĐÃ CẬP NHẬT
   searchInput.addEventListener('input', (e) => {
     const searchTerm = e.target.value.toLowerCase();
     
+    // Lọc danh sách User
     document.querySelectorAll('#user-list .user-item').forEach(item => {
         const userNameElement = item.querySelector('.user-name');
         if (userNameElement) {
@@ -609,6 +504,7 @@ if (path.endsWith('/chat.html')) {
         }
     });
 
+    // Lọc danh sách Nhóm
     document.querySelectorAll('#group-list .group-item').forEach(item => {
         const groupNameElement = item.querySelector('.user-name');
         if (groupNameElement) {
@@ -620,24 +516,12 @@ if (path.endsWith('/chat.html')) {
 
   // Xử lý lỗi Socket
   window.socket.on('connect_error', (err) => {
-      console.error('Socket connect error:', err.message);
+      console.error(err.message);
       if (err.message.includes('Xác thực thất bại')) {
           alert('Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại.');
           localStorage.removeItem('token');
           window.location.href = '/index.html';
       }
-  });
-
-  // Xử lý lỗi xác thực
-  window.socket.on('auth_error', (data) => {
-      alert(data.message);
-      localStorage.removeItem('token');
-      window.location.href = '/index.html';
-  });
-
-  // Xử lý lỗi chung
-  window.socket.on('error', (errorMessage) => {
-      alert(`Lỗi: ${errorMessage}`);
   });
 
 } // end if chat.html

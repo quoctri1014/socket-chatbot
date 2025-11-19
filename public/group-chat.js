@@ -72,40 +72,25 @@ document.addEventListener('DOMContentLoaded', () => {
              if (activeGroupItem) activeGroupItem.classList.add('active');
         }
 
-        // --- SOCKET LISTENERS (Chỉ dành cho nhóm) ---
-        // (Chuyển sang main.js để quản lý tập trung, NHƯNG để ở đây cũng OK)
-        
-        // 1. Nhận danh sách nhóm từ server (khi bấm tab)
-        window.socket.on('groupsList', (groups) => {
-            window.allGroupsCache = groups;
-            window.renderGroupListFromCache();
-
-            // (MỚI) Kích hoạt lại chat nếu đang active
-            if (window.currentChatContext.type === 'group') {
-                const activeGroupItem = groupListDiv.querySelector(`[data-group-id="${window.currentChatContext.id}"]`);
-                if (activeGroupItem) activeGroupItem.classList.add('active');
-            }
-        });
-
-        // 2. Nhận thông tin về 1 nhóm mới (khi mình được thêm vào)
+        // Nhận thông tin về 1 nhóm mới (khi mình được thêm vào hoặc tự tạo)
         window.socket.on('newGroupAdded', (newGroup) => {
             window.allGroupsCache.push(newGroup);
             window.renderGroupListFromCache();
-            // (Nên thêm: thông báo)
-            alert(`Bạn vừa được thêm vào nhóm mới: ${newGroup.name}`);
         });
 
 
         // --- LOGIC MODAL TẠO NHÓM ---
 
         // 1. Mở Modal: Hiển thị danh sách user từ cache
-        createGroupBtn.addEventListener('click', () => {
+        createGroupBtn.addEventListener('click', async () => {
             modalUserList.innerHTML = '';
-            // Lấy danh sách user từ cache global (do main.js tạo)
+            // (SỬA) Lấy danh sách user từ cache global (do main.js tạo)
+            // Nhanh hơn và không cần gọi API mỗi lần mở modal
             const users = Object.values(window.allUsersCache);
             
             users.forEach(user => {
-                if (user.userId === window.myUserId) return; // Không tự thêm mình
+                // Không cho phép thêm AI hoặc chính mình vào nhóm
+                if (user.userId === window.myUserId || user.userId === 0) return; 
 
                 const item = document.createElement('label');
                 item.className = 'modal-user-item';

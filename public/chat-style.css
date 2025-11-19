@@ -201,6 +201,7 @@ body {
 }
 
 /* Danh sách Users/Groups */
+/* Container cho danh sách */
 #users-list-container,
 #groups-list-container {
     flex: 1;
@@ -209,7 +210,7 @@ body {
 }
 
 #groups-list-container {
-    position: relative;
+    position: relative; /* Cho nút tạo nhóm */
 }
 
 /* Item trong danh sách */
@@ -223,7 +224,6 @@ body {
     cursor: pointer;
     transition: all 0.2s;
     align-items: center;
-    position: relative;
 }
 
 .user-item:hover,
@@ -255,7 +255,7 @@ body {
     color: #fff;
 }
 
-/* Dấu chấm trạng thái */
+/* Dấu chấm trạng thái (dùng cho cả ::after và .status-dot) */
 .user-avatar.online::after,
 .avatar.online::after,
 .status-dot.online {
@@ -292,11 +292,12 @@ body {
     border: 2px solid var(--sidebar-bg);
 }
 
+
 /* Thông tin User/Group */
 .user-info {
     display: flex;
     flex-direction: column;
-    overflow: hidden;
+    overflow: hidden; /* Quan trọng để ellipsis hoạt động */
 }
 
 .user-name,
@@ -324,100 +325,27 @@ body {
 
 /* Nút tạo nhóm */
 #create-group-btn {
-    margin: 10px 20px 15px 20px; 
-    padding: 15px 20px;
+    position: absolute;
+    bottom: 20px;
+    right: 20px;
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    border: none;
     background: linear-gradient(120deg, var(--primary-color), var(--accent-color));
     color: white;
-    border: none;
-    border-radius: 12px;
-    font-size: 1.1em;
-    font-weight: 700;
+    font-size: 30px;
     cursor: pointer;
-    text-align: center;
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
-    transition: all 0.2s ease;
-    flex-shrink: 0;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    transition: transform 0.2s;
     display: flex;
     align-items: center;
     justify-content: center;
+    z-index: 5; /* Đảm bảo nổi lên trên danh sách */
 }
 
 #create-group-btn:hover {
-    opacity: 0.95;
-    transform: translateY(-2px);
-    box-shadow: 0 6px 15px rgba(0, 0, 0, 0.3);
-}
-
-/* Badge tin nhắn chưa đọc */
-.unread-badge {
-    display: none;
-    position: absolute;
-    top: 50%;
-    right: 15px;
-    transform: translateY(-50%);
-    background-color: var(--accent-color);
-    color: white;
-    font-size: 11px;
-    font-weight: 600;
-    padding: 3px 7px;
-    border-radius: 12px;
-    min-width: 10px;
-    text-align: center;
-    line-height: 1.1;
-    z-index: 10;
-}
-
-#sidebar {
-    position: relative;
-    display: flex;
-    flex-direction: column;
-    height: 100vh;
-}
-
-#sidebar-content {
-    flex-grow: 1;
-    overflow: hidden;
-    display: flex;
-}
-
-.tab-content {
-    display: none;
-    flex-direction: column;
-    width: 100%;
-    height: 100%;
-    overflow: hidden;
-}
-
-.tab-content.active {
-    display: flex;
-}
-
-#user-list,
-#group-list {
-    flex-grow: 1;
-    overflow-y: auto;
-    padding-left: 10px;
-    padding-right: 10px;
-}
-
-.floating-plus-btn {
-  position: fixed;
-  bottom: 30px;
-  right: 30px;
-  width: 60px;
-  height: 60px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #4CAF50, #2E7D32);
-  color: white;
-  font-size: 30px;
-  border: none;
-  box-shadow: 0 4px 10px rgba(0,0,0,0.3);
-  cursor: pointer;
-  transition: all 0.3s ease;
-}
-.floating-plus-btn:hover {
-  transform: scale(1.1);
-  box-shadow: 0 6px 15px rgba(0,0,0,0.4);
+    transform: scale(1.1);
 }
 
 /**
@@ -439,7 +367,7 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    background: var(--sidebar-bg);
+    background: var(--sidebar-bg); /* Dùng sidebar-bg cho header để đồng nhất */
 }
 
 #chat-header-title,
@@ -480,7 +408,7 @@ body {
     display: flex;
     flex-direction: column;
     gap: 14px;
-    background: linear-gradient(to bottom, var(--background-color), var(--message-bg));
+    background: linear-gradient(to bottom, var(--background-color), var(--message-bg)); /* Thêm gradient nhẹ */
 }
 
 .message {
@@ -525,57 +453,7 @@ body {
     margin-top: 5px;
     display: block;
     text-align: right;
-    color: inherit;
-}
-
-/* Tin nhắn file và image */
-.message.file-message {
-    background: var(--message-bg);
-    border-left: 4px solid var(--accent-color);
-    max-width: 400px;
-}
-
-.message.image-message {
-    max-width: 300px;
-    padding: 0;
-    background: transparent;
-    box-shadow: none;
-}
-
-.message img {
-    max-width: 100%;
-    border-radius: 12px;
-}
-
-.file-info {
-    padding: 12px;
-}
-
-.file-name {
-    font-weight: 600;
-    margin-bottom: 5px;
-    word-break: break-all;
-}
-
-.file-size {
-    font-size: 12px;
-    color: var(--text-secondary);
-}
-
-.download-btn {
-    display: inline-block;
-    margin-top: 8px;
-    padding: 6px 12px;
-    background: var(--accent-color);
-    color: white;
-    text-decoration: none;
-    border-radius: 6px;
-    font-size: 12px;
-    transition: background 0.2s;
-}
-
-.download-btn:hover {
-    background: var(--primary-color);
+    color: inherit; /* Kế thừa màu từ tin nhắn (trắng hoặc đen) */
 }
 
 /* Typing Indicator */
@@ -676,30 +554,9 @@ body {
     transform: scale(1.1);
 }
 
-.emoji-button {
-    padding: 14px;
-    border: none;
-    border-radius: 50%;
-    background: var(--message-bg);
-    color: var(--text-color);
-    cursor: pointer;
-    width: 48px;
-    height: 48px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 20px;
-    transition: all 0.2s;
-}
-
-.emoji-button:hover {
-    background: var(--hover-color);
-    transform: scale(1.1);
-}
-
 /**
  * ====================================================================
- * MODAL (HỘP THOẠI)
+ * MODAL (HỘP THOẠI) - Ví dụ: Tạo nhóm
  * ====================================================================
  */
 .modal-backdrop {
@@ -776,6 +633,7 @@ body {
 }
 
 .modal-user-item input[type="checkbox"] {
+    /* Đảm bảo checkbox hiển thị rõ ràng */
     width: 18px;
     height: 18px;
     accent-color: var(--primary-color);
@@ -801,18 +659,15 @@ body {
     opacity: 0.9;
 }
 
-#cancel-create-group,
-#cancel-file {
+#cancel-create-group {
     background: var(--message-bg);
     color: var(--text-secondary);
 }
 
-#confirm-create-group,
-#send-file {
+#confirm-create-group {
     background: linear-gradient(120deg, var(--primary-color), var(--accent-color));
     color: white;
 }
-
 .empty-list-msg {
     color: var(--text-secondary);
     font-style: italic;
@@ -820,322 +675,118 @@ body {
     padding-top: 20px;
     font-size: 14px;
 }
-
-/* WebRTC Modal Styles */
-.call-modal {
-    max-width: 800px;
-    background: var(--sidebar-bg);
+.user-item, .group-item {
+  position: relative;
 }
 
-.video-container {
-    position: relative;
+.unread-badge {
+  display: none; /* Ẩn ban đầu */
+  position: absolute;
+  top: 50%; /* Căn giữa theo chiều dọc */
+  right: 15px; /* Đặt ở bên phải */
+  transform: translateY(-50%);
+  
+  background-color: var(--accent-color); /* Dùng màu nhấn của bạn */
+  color: white; /* Chữ trắng */
+  
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 7px;
+  border-radius: 12px; /* Bo tròn */
+  min-width: 10px; /* Để nó tròn đẹp khi chỉ có 1 số */
+  text-align: center;
+  line-height: 1.1;
+  
+  /* Ngăn không cho badge làm hỏng layout */
+  z-index: 10; 
+}
+#sidebar {
+    position: relative; /* Rất quan trọng! */
+    /* Các thuộc tính khác của sidebar (width, height, background...) giữ nguyên */
+    display: flex; /* Dùng flex để các phần tử con sắp xếp */
+    flex-direction: column; /* Xếp theo cột */
+    height: 100vh; /* Chiều cao đầy đủ của màn hình */
+}
+
+/* 2. Đảm bảo khu vực nội dung (tab-content) chiếm hết không gian còn lại */
+#sidebar-content {
+    flex-grow: 1; /* Lấp đầy không gian còn lại (quan trọng) */
+    overflow: hidden; /* Ngăn không cho chính nó cuộn */
+    display: flex; /* Dùng flex để quản lý các tab-content */
+}
+
+/* 3. Style chung cho các tab-content (Users và Groups) */
+.tab-content {
+    display: none; /* Mặc định ẩn, JS sẽ hiện khi active */
+    flex-direction: column; /* Nội dung bên trong xếp dọc */
     width: 100%;
-    height: 400px;
-    background: #000;
-    border-radius: 12px;
-    overflow: hidden;
-    margin-bottom: 20px;
+    height: 100%; /* Chiếm hết chiều cao của sidebar-content */
+    overflow: hidden; /* Ngăn bản thân tab-content cuộn */
 }
 
-#remote-video {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
+/* 4. Tab đang hoạt động */
+.tab-content.active {
+    display: flex; /* Hiển thị tab đang active */
 }
 
-#local-video {
-    position: absolute;
-    bottom: 20px;
-    right: 20px;
-    width: 200px;
-    height: 150px;
-    object-fit: cover;
-    border: 2px solid var(--accent-color);
-    border-radius: 8px;
-    background: #000;
+/* 5. CÁC DANH SÁCH (User và Group) mới là nơi cuộn */
+#user-list,
+#group-list {
+    flex-grow: 1; /* Lấp đầy không gian còn lại trong tab-content */
+    overflow-y: auto; /* CHỈ PHẦN DANH SÁCH NÀY MỚI CUỘN */
+    padding-left: 10px;
+    padding-right: 10px;
 }
 
-.call-controls {
-    display: flex;
-    justify-content: center;
-    gap: 15px;
-    margin-top: 20px;
-}
 
-.control-btn {
-    width: 60px;
-    height: 60px;
-    border-radius: 50%;
+#create-group-btn {
+    
+    /* THÊM: Style mới cho nút dạng block bình thường */
+    margin: 10px 20px 15px 20px; 
+    padding: 15px 20px;
+    background: linear-gradient(120deg, var(--primary-color), var(--accent-color));
+    color: white;
     border: none;
-    background: var(--message-bg);
-    color: var(--text-color);
-    font-size: 20px;
+    border-radius: 12px;
+    font-size: 1.1em;
+    font-weight: 700;
     cursor: pointer;
-    transition: all 0.3s;
+    text-align: center;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+    transition: all 0.2s ease;
+    flex-shrink: 0; /* Ngăn nút bị co lại */
     display: flex;
     align-items: center;
     justify-content: center;
 }
 
-.control-btn:hover {
-    transform: scale(1.1);
-    background: var(--hover-color);
+#create-group-btn:hover {
+    opacity: 0.95;
+    transform: translateY(-2px); /* Bỏ translateX */
+    box-shadow: 0 6px 15px rgba(0, 0, 0, 0.3);
 }
 
-.control-btn.hangup {
-    background: #ff4444;
-    color: white;
+/* (SỬA) Đảm bảo class plus-button cũng được style đúng nếu bạn dùng nó */
+.plus-button {
+    font-size: 1.1em;
+    line-height: 1.3;
 }
-
-.control-btn.answer {
-    background: #4CAF50;
-    color: white;
+.floating-plus-btn {
+  position: fixed;
+  bottom: 30px;
+  right: 30px;
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #4CAF50, #2E7D32);
+  color: white;
+  font-size: 30px;
+  border: none;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+  cursor: pointer;
+  transition: all 0.3s ease;
 }
-
-.control-btn.active {
-    background: var(--accent-color);
-    color: white;
-}
-
-/* Emoji Picker */
-.emoji-picker {
-    position: absolute;
-    bottom: 70px;
-    left: 20px;
-    background: var(--sidebar-bg);
-    border: 1px solid var(--border-color);
-    border-radius: 12px;
-    padding: 15px;
-    box-shadow: 0 5px 20px rgba(0,0,0,0.2);
-    z-index: 1000;
-}
-
-.emoji-grid {
-    display: grid;
-    grid-template-columns: repeat(5, 1fr);
-    gap: 10px;
-}
-
-.emoji-grid span {
-    font-size: 24px;
-    cursor: pointer;
-    padding: 5px;
-    border-radius: 6px;
-    text-align: center;
-    transition: background 0.2s;
-}
-
-.emoji-grid span:hover {
-    background: var(--hover-color);
-}
-
-/* File input */
-#file-input {
-    width: 100%;
-    padding: 10px;
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
-    background: var(--background-color);
-    color: var(--text-color);
-    margin-bottom: 15px;
-}
-
-/* Encryption status */
-.encryption-status {
-    position: fixed;
-    top: 10px;
-    right: 10px;
-    background: rgba(0, 128, 0, 0.9);
-    color: white;
-    padding: 10px 15px;
-    border-radius: 8px;
-    z-index: 1000;
-    font-size: 14px;
-    font-weight: 600;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-    animation: slideInRight 0.3s ease-out;
-}
-
-[data-theme="dark"] .encryption-status {
-    background: rgba(34, 197, 94, 0.9);
-}
-
-/* Thông báo file mới */
-.file-notification {
-    position: fixed;
-    top: 20px;
-    right: 20px;
-    background: var(--primary-color);
-    color: white;
-    padding: 12px 16px;
-    border-radius: 8px;
-    z-index: 1000;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-    animation: slideInRight 0.3s ease-out;
-    max-width: 300px;
-}
-
-@keyframes slideInRight {
-    from {
-        transform: translateX(100%);
-        opacity: 0;
-    }
-    to {
-        transform: translateX(0);
-        opacity: 1;
-    }
-}
-
-/* Responsive Design */
-@media (max-width: 768px) {
-    #app-container {
-        flex-direction: column;
-    }
-    
-    #sidebar {
-        width: 100%;
-        max-width: none;
-        height: 40vh;
-    }
-    
-    #chat-area {
-        height: 60vh;
-    }
-    
-    .message {
-        max-width: 85%;
-    }
-    
-    #header-buttons {
-        flex-direction: column;
-        gap: 5px;
-    }
-    
-    #header-buttons button {
-        padding: 4px 8px;
-        font-size: 12px;
-    }
-}
-
-@media (max-width: 480px) {
-    #sidebar-header {
-        padding: 15px;
-    }
-    
-    #my-username {
-        font-size: 16px;
-    }
-    
-    .user-item,
-    .group-item {
-        padding: 8px 12px;
-    }
-    
-    #chat-form {
-        padding: 12px 16px;
-    }
-    
-    #message-input {
-        padding: 10px 16px;
-    }
-    
-    .modal-content {
-        padding: 20px;
-        margin: 10px;
-    }
-}
-
-/* Loading states */
-.loading {
-    opacity: 0.6;
-    pointer-events: none;
-}
-
-/* Success states */
-.success-message {
-    background: var(--green-online);
-    color: white;
-    padding: 8px 12px;
-    border-radius: 6px;
-    margin: 5px 0;
-    font-size: 12px;
-}
-
-/* Error states */
-.error-message {
-    background: var(--red-offline);
-    color: white;
-    padding: 8px 12px;
-    border-radius: 6px;
-    margin: 5px 0;
-    font-size: 12px;
-}
-
-/* File upload progress */
-.upload-progress {
-    width: 100%;
-    height: 4px;
-    background: var(--border-color);
-    border-radius: 2px;
-    margin-top: 5px;
-    overflow: hidden;
-}
-
-.upload-progress-bar {
-    height: 100%;
-    background: var(--accent-color);
-    transition: width 0.3s ease;
-}
-
-/* Online/Offline status indicators */
-.status-indicator {
-    display: inline-block;
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    margin-right: 5px;
-}
-
-.status-online {
-    background: var(--green-online);
-}
-
-.status-offline {
-    background: var(--red-offline);
-}
-
-/* Selection states */
-.user-item.selected,
-.group-item.selected {
-    background: var(--hover-color);
-    border: 2px solid var(--accent-color);
-}
-
-/* Focus states for accessibility */
-button:focus,
-input:focus,
-textarea:focus {
-    outline: 2px solid var(--accent-color);
-    outline-offset: 2px;
-}
-
-/* High contrast mode support */
-@media (prefers-contrast: high) {
-    :root {
-        --border-color: #000000;
-        --text-secondary: #000000;
-    }
-    
-    .message {
-        border: 1px solid var(--border-color);
-    }
-}
-
-/* Reduced motion support */
-@media (prefers-reduced-motion: reduce) {
-    * {
-        animation-duration: 0.01ms !important;
-        animation-iteration-count: 1 !important;
-        transition-duration: 0.01ms !important;
-    }
+.floating-plus-btn:hover {
+  transform: scale(1.1);
+  box-shadow: 0 6px 15px rgba(0,0,0,0.4);
 }
