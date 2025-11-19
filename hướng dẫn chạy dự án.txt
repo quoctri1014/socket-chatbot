@@ -1,0 +1,7 @@
+mở temninal tên laptop 
+link tới thư mục chứ project 
+vd 
+- window +R 
+- cmd
+- cd link tới thư mục project
+- gõ: "node server.js"
