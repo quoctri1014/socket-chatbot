@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat Online</title>
+    <link rel="stylesheet" href="chat-style.css"> 
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+</head>
+<body data-theme="light">
+    <div id="app-container">
+
+        <div id="sidebar">
+            <div id="sidebar-header">
+                <h3 id="my-username">Đang tải...</h3>
+                <div id="header-buttons">
+                    <button id="theme-toggle" title="Chuyển chế độ">🌙</button>
+                    <button id="logout-button">Đăng xuất</button>
+                </div>
+            </div>
+
+            <div id="search-bar">
+                <div class="search-wrapper">
+                    <span class="search-icon">🔍</span>
+                    <input type="text" id="search-input" placeholder="Tìm kiếm người dùng...">
+                </div>
+            </div>
+
+            <div id="sidebar-tabs">
+                <button class="sidebar-tab active" data-tab="users">Người dùng</button>
+                <button class="sidebar-tab" data-tab="groups">Nhóm</button>
+            </div>
+
+            <div id="sidebar-content">
+
+                <div id="users-list-container" class="tab-content active">
+                    <div id="user-list">
+                        </div>
+                </div>
+                
+                <div id="groups-list-container" class="tab-content">
+                    <div id="group-list"></div>
+                        <button id="create-group-btn" class="floating-plus-btn">
+                        <span>＋</span>
+                    </button>
+                </div>
+
+            </div> </div> <div id="chat-area">
+            <div id="chat-header">
+                <h2 id="chat-header-title">Hãy chọn một người dùng để bắt đầu chat</h2>
+                <div id="chat-header-actions">
+                    <button id="call-button" class="header-action-btn" title="Gọi thoại">
+                        <i class="fas fa-phone"></i>
+                    </button>
+                    <button id="video-call-button" class="header-action-btn" title="Gọi video">
+                        <i class="fas fa-video"></i>
+                    </button>
+                </div>
+            </div>
+            <div id="messages"></div>
+            <div id="typing-indicator" class="hidden">Người kia đang gõ...</div>
+            <form id="chat-form">
+                <button type="button" id="attach-button" title="Đính kèm file">+</button>
+                <input id="message-input" autocomplete="off" placeholder="Chọn một người để nhắn tin..." disabled/>
+                <button type="submit" disabled>Gửi</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="create-group-modal" class="modal-backdrop hidden">
+        <div class="modal-content">
+            <h2>Tạo Nhóm Mới</h2>
+            <input type="text" id="group-name-input" placeholder="Nhập tên nhóm...">
+            <h3>Chọn thành viên:</h3>
+            <div id="modal-user-list"></div>
+            <div class="modal-actions">
+                <button id="cancel-create-group">Hủy</button>
+                <button id="confirm-create-group">Tạo</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="main.js"></script> 
+    <script src="group-chat.js"></script> 
+</body> 
+</html>
