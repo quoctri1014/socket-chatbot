@@ -29,6 +29,39 @@ const io = new Server(server, { /* options */ });
 
 // in-memory online users map: { userId: { socketId, username } }
 const onlineUsers = {};
+
+// (SỬA LỖI) Định nghĩa lại hàm helper ở đây, ngay đầu tệp
+async function broadcastUpdatedUserList() {
+  try {
+    // Lấy tất cả user từ DB, bao gồm cả user AI (id=0)
+    const [allUsersFromDB] = await db.query('SELECT id, username FROM users');
+
+    // Lọc ra ai đang online, ai offline từ danh sách người dùng THỰC
+    const userList = allUsersFromDB.map(user => {
+      const isOnline = !!onlineUsers[user.id]; // Kiểm tra xem user có trong onlineUsers không
+      
+      // (SỬA LỖI) Bỏ qua user AI (id=0) nếu nó có trong DB, vì ta sẽ thêm nó thủ công
+      if (user.id === 0) {
+        return null; 
+      }
+
+      return {
+        userId: user.id,
+        username: user.username,
+        online: isOnline
+      };
+    }).filter(user => user !== null); // Loại bỏ các giá trị null
+
+    // (SỬA LỖI) Luôn thêm Trợ lý AI vào đầu danh sách
+    userList.unshift({ userId: 0, username: 'Trợ lý AI', online: true });
+
+    // Gửi danh sách đã xử lý tới tất cả client
+    io.emit('userList', userList); 
+  } catch (err) {
+    console.error('Lỗi khi broadcast danh sách user:', err);
+  }
+}
+
 // -----------------------------------------------------------------
 // --- (BẮT ĐẦU) THÊM TOÀN BỘ KHỐI CODE NÀY CHO AI THÔNG MINH ---
 // -----------------------------------------------------------------
@@ -66,6 +99,23 @@ const tools = [
           }
         },
         required: ["location"]
+      }
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "search_internal_database",
+      description: "Tìm kiếm thông tin người dùng trong hệ thống nội bộ dựa trên tên.",
+      parameters: {
+        type: "object",
+        properties: {
+          username: {
+            type: "string",
+            description: "Tên người dùng cần tìm, ví dụ: 'thanhhieu', 'phong'."
+          }
+        },
+        required: ["username"]
       }
     }
   }
@@ -137,12 +187,43 @@ async function getTouristAttractions(location) {
   }
 }
 
+// (GIAI ĐOẠN 2) Hàm hỗ trợ cho tool mới
+async function searchInternalDatabase(username) {
+  try {
+    const [users] = await db.query(
+      'SELECT id, username, createdAt FROM users WHERE username LIKE ? AND id != 0', 
+      [`%${username}%`]
+    );
+    if (users.length === 0) {
+      return JSON.stringify({ info: `Không tìm thấy người dùng nào có tên giống '${username}'.` });
+    }
+    return JSON.stringify(users);
+  } catch (error) {
+    console.error("Lỗi khi tìm kiếm DB nội bộ:", error.message);
+    return JSON.stringify({ error: "Lỗi khi truy vấn cơ sở dữ liệu." });
+  }
+}
+
 // ---------------------------------------------------------------
 // --- (KẾT THÚC) KHỐI CODE THÊM MỚI ---
 // ---------------------------------------------------------------
 async function handleAIChat(userMessage, myUserId, myUsername) {
   const socket = onlineUsers[myUserId] ? io.sockets.sockets.get(onlineUsers[myUserId].socketId) : null;
   if (!socket) return; // Thoát nếu user không online
+
+  // (SỬA LỖI) Bước 0: Lưu tin nhắn của người dùng vào DB NGAY LẬP TỨC
+  // Điều này đảm bảo cuộc hội thoại được ghi lại đầy đủ.
+  try {
+    await db.query(
+      'INSERT INTO messages (senderId, recipientId, content) VALUES (?, ?, ?)',
+      [myUserId, 0, userMessage] // senderId = user, recipientId = 0 (AI)
+    );
+  } catch (dbError) {
+    console.error("Lỗi khi lưu tin nhắn của người dùng vào DB:", dbError);
+    // Có thể thông báo lỗi cho người dùng nếu cần
+    socket.emit('error', 'Không thể gửi tin nhắn của bạn lúc này.');
+    return; // Dừng thực thi nếu không lưu được
+  }
 
   // 1. Xây dựng mảng tin nhắn (với System Prompt mới)
   const messages = [
@@ -152,7 +233,8 @@ async function handleAIChat(userMessage, myUserId, myUsername) {
       Bạn đang nói chuyện với người dùng tên là '${myUsername}'.
       Bạn có các công cụ để tra cứu thời tiết và địa điểm du lịch.
       Khi người dùng hỏi, hãy sử dụng các công cụ này để lấy dữ liệu.
-      Sau đó, hãy TỔNG HỢP dữ liệu (thời tiết, địa điểm) để đưa ra lời khuyên về
+       Bạn cũng có thể tìm kiếm người dùng trong database nội bộ.
+       Sau đó, hãy TỔNG HỢP dữ liệu để đưa ra lời khuyên về
       địa điểm và thời gian đi chơi hợp lý.
       Ví dụ: Nếu trời mưa, gợi ý bảo tàng. Nếu trời nắng, gợi ý công viên.
       Luôn trả lời bằng tiếng Việt.`
@@ -163,8 +245,8 @@ async function handleAIChat(userMessage, myUserId, myUsername) {
   try {
     const [history] = await db.query(
       `SELECT content, senderId FROM messages 
-       WHERE (senderId = ? AND recipientId = 0) OR (senderId = 0 AND recipientId = ?)
-       ORDER BY createdAt DESC LIMIT 10`, 
+       WHERE ((senderId = ? AND recipientId = 0) OR (senderId = 0 AND recipientId = ?))
+       ORDER BY createdAt DESC LIMIT 9`, // SỬA LỖI: Chỉ lấy 9 tin nhắn cũ nhất
       [myUserId, myUserId]
     );
     // Thêm lịch sử vào mảng (theo thứ tự từ cũ đến mới)
@@ -211,6 +293,8 @@ async function handleAIChat(userMessage, myUserId, myUsername) {
           functionResponse = await getWeatherData(functionArgs.location);
         } else if (functionName === 'get_tourist_attractions') {
           functionResponse = await getTouristAttractions(functionArgs.location);
+        } else if (functionName === 'search_internal_database') {
+          functionResponse = await searchInternalDatabase(functionArgs.username);
         }
 
         // Thêm kết quả của tool vào lịch sử
@@ -264,38 +348,44 @@ async function handleAIChat(userMessage, myUserId, myUsername) {
     socket.emit('error', 'Trợ lý AI đang gặp lỗi, vui lòng thử lại sau.');
   }
 }
+
+// (SỬA LỖI) Thêm lại các middleware của Express và hàm xác thực
 app.use(express.static('public'));
 app.use(express.json());
 
-// --- auth middleware for REST APIs (unchanged) ---
+// Middleware để xác thực token cho các API yêu cầu đăng nhập
 const authenticateToken = (req, res, next) => {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1];
-  if (token == null) return res.sendStatus(401);
+  if (token == null) return res.sendStatus(401); // Không có token
+
   jwt.verify(token, JWT_SECRET, (err, user) => {
-    if (err) return res.sendStatus(403);
-    req.user = user;
-    next();
+    if (err) return res.sendStatus(403); // Token không hợp lệ hoặc hết hạn
+    req.user = user; // Gắn thông tin user vào request
+    next(); // Chuyển đến handler tiếp theo
   });
 };
 
-// --- REST endpoints (register/login, groups) ---
-// (Giữ nguyên toàn bộ code API của bạn)
+// --- Các API Endpoints ---
+
+// (SỬA LỖI) Thêm lại API endpoint cho việc đăng ký
 app.post('/api/register', async (req, res) => {
   try {
     const { username, password } = req.body;
     if (!username || !password) {
-      return res.status(400).json({ message: 'Vui long nhap ten va mat khau.' });
+      return res.status(400).json({ message: 'Vui lòng nhập tên và mật khẩu.' });
     }
+    // Mã hóa mật khẩu
     const passwordHash = await bcrypt.hash(password, 10);
+    // Lưu vào database
     await db.query('INSERT INTO users (username, passwordHash) VALUES (?, ?)', [username, passwordHash]);
-    res.status(201).json({ message: 'Dang ky thanh cong!' });
+    res.status(201).json({ message: 'Đăng ký thành công!' });
   } catch (error) {
     if (error.code === 'ER_DUP_ENTRY') {
-      return res.status(400).json({ message: 'Ten dang nhap da ton tai.' });
+      return res.status(400).json({ message: 'Tên đăng nhập đã tồn tại.' });
     }
-    console.error(error);
-    res.status(500).json({ message: 'Loi may chu.' });
+    console.error('Lỗi đăng ký:', error);
+    res.status(500).json({ message: 'Lỗi máy chủ.' });
   }
 });
 
@@ -381,44 +471,8 @@ io.on('connection', async (socket) => {
   // welcome (Giữ nguyên)
   socket.emit('welcome', { userId: myUserId, username: myUsername });
 
-  // prepare user lists (Giữ nguyên)
-  const userListForClient = Object.keys(onlineUsers).map(uid => ({
-    userId: parseInt(uid),
-    username: onlineUsers[uid].username,
-    online: true
-  }));
-
-  const ids = Object.keys(onlineUsers).length > 0 ? Object.keys(onlineUsers) : [0];
-  try {
-        // Lấy tất cả user từ DB, BAO GỒM CẢ user AI (id=0)
-        const [allUsersFromDB] = await db.query('SELECT id, username FROM users');
-
-        // Lọc ra ai đang online, ai offline
-        const userList = allUsersFromDB.map(user => {
-            const isOnline = !!onlineUsers[user.id]; // Kiểm tra xem user có trong onlineUsers không
-            
-            // Đặc biệt: AI (id=0) luôn luôn online
-            if (user.id === 0) {
-                return {
-                    userId: 0,
-                    username: 'Trợ lý AI', // Tên này lấy từ DB
-                    online: true
-                };
-            }
-
-            return {
-                userId: user.id,
-                username: user.username,
-                online: isOnline
-            };
-        });
-
-        // Gửi danh sách đã xử lý
-        io.emit('userList', userList);
-        
-    } catch (err) {
-        console.error('user list error', err);
-    }
+  // Gửi danh sách người dùng đã cập nhật cho mọi người khi có người mới vào
+  await broadcastUpdatedUserList();
 
   // ===================================
   // === BẮT ĐẦU THAY ĐỔI (DI CHUYỂN) ===
@@ -469,19 +523,42 @@ io.on('connection', async (socket) => {
     }
   });
 
+  // (MỚI) Sự kiện chuyên biệt để tải lịch sử chat với AI
+  socket.on('loadAIHistory', async () => {
+    try {
+      const [messages] = await db.query(
+        `SELECT senderId, content, createdAt
+         FROM messages
+         WHERE (senderId = ? AND recipientId = 0) OR (senderId = 0 AND recipientId = ?)
+         ORDER BY createdAt ASC`,
+        [myUserId, myUserId]
+      );
+      // Gửi lại sự kiện privateHistory để client có thể tái sử dụng logic render
+      // nhưng với dữ liệu chỉ của AI
+      socket.emit('privateHistory', { recipientId: 0, messages });
+    } catch (err) {
+      console.error(`Lỗi khi tải lịch sử AI cho user ${myUserId}:`, err);
+    }
+  });
+
+
+  // (MỚI) Xử lý sự kiện chat với AI chuyên biệt
+  socket.on('chatWithAI', async ({ content }) => {
+    // Tái sử dụng hàm handleAIChat đã có
+    // Điều này giúp client có một sự kiện rõ ràng hơn khi muốn nói chuyện với AI
+    if (content) {
+      await handleAIChat(content, myUserId, myUsername);
+    }
+  });
+
 
   // privateMessage (Giữ nguyên tính năng AI và chat 1-1 của bạn)
   socket.on('privateMessage', async (data) => {
     const { recipientId, content } = data;
-    const senderId = myUserId;
-
-    // --- Nếu nhắn cho AI (Giữ nguyên) ---
-    if (recipientId === 0) {
-      await handleAIChat(content, senderId, myUsername);
-      return; 
-    }
 
     // --- Nếu nhắn giữa người dùng với nhau (Giữ nguyên) ---
+    // (ĐÃ XÓA) Logic xử lý AI đã được chuyển hoàn toàn sang sự kiện 'chatWithAI'
+    const senderId = myUserId;
     try {
       const [result] = await db.query(
         'INSERT INTO messages (senderId, recipientId, content) VALUES (?, ?, ?)',
@@ -567,9 +644,22 @@ io.on('connection', async (socket) => {
 
   // --- khi user ngắt kết nối (Giữ nguyên) ---
   socket.on('disconnect', () => {
-    console.log(`User ${myUsername} (ID: ${myUserId}) disconnected.`);
-    delete onlineUsers[myUserId];
-    io.emit('userOffline', { userId: myUserId });
+    // Bọc trong một hàm async để có thể dùng await
+    const handleDisconnect = async () => {
+      try {
+        console.log(`User ${myUsername} (ID: ${myUserId}) disconnected.`);
+        delete onlineUsers[myUserId];
+
+        await broadcastUpdatedUserList(); // Gọi hàm helper để gửi lại danh sách user
+      } catch (err) {
+        // (CẢI TIẾN) Nếu CSDL lỗi khi có người ngắt kết nối, chỉ ghi log chứ không làm sập server
+        console.error('Lỗi CSDL khi cập nhật danh sách user sau khi disconnect:', err.message);
+        // Trong trường hợp này, chúng ta không gửi gì cho client để tránh gây lỗi giao diện.
+        // Trạng thái online/offline sẽ được đồng bộ lại ở lần kết nối/ngắt kết nối tiếp theo.
+      }
+    };
+
+    handleDisconnect();
   });
 }); // <-- đóng ngoặc cho io.on('connection', ...)
 

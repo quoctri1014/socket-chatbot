@@ -5,6 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Đăng nhập - Chatbot</title>
     <link rel="stylesheet" href="style.css">
+    
+    <script>
+        const savedTheme = localStorage.getItem('theme') || 'light';
+        document.documentElement.dataset.theme = savedTheme;
+    </script>
 </head>
 <body>
     <div class="auth-container">
@@ -13,7 +18,8 @@
             <input type="text" id="login-username" placeholder="Tên đăng nhập" required>
             <input type="password" id="login-password" placeholder="Mật khẩu" required>
             <button type="submit">Đăng nhập</button>
-            <p id="login-error" class="error-message"></p>
+            
+            <p id="auth-message" class="message-display"></p>
             
             <p class="switch-form">
                 Chưa có tài khoản? <a href="/register.html">Đăng ký ngay</a>
@@ -21,8 +27,6 @@
         </form>
     </div>
 
-    <script src="/socket.io/socket.io.js"></script>
     <script src="main.js"></script>
-    <script src="group-chat.js"></script>
 </body>
 </html>

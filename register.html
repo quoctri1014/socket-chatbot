@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Đăng ký - Chatbot</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .hidden { display: none; }
+        .step-title { text-align: center; margin-bottom: 15px; color: #555; }
+    </style>
+    <script>
+        const savedTheme = localStorage.getItem('theme') || 'light';
+        document.documentElement.dataset.theme = savedTheme;
+    </script>
+</head>
+<body>
+    <div class="auth-container">
+        <div class="auth-form">
+            <h2>Đăng ký tài khoản</h2>
+            
+            <form id="step-1-form">
+                <div class="step-title">Bước 1: Thông tin đăng nhập</div>
+                <input type="text" id="reg-username" placeholder="Tên đăng nhập" required>
+                <input type="password" id="reg-password" placeholder="Mật khẩu" required>
+                <input type="password" id="reg-confirm-password" placeholder="Nhập lại mật khẩu" required>
+                <input type="email" id="reg-email" placeholder="Địa chỉ Email (để nhận OTP)" required>
+                <button type="submit">Tiếp tục & Gửi OTP</button>
+            </form>
+
+            <form id="step-2-form" class="hidden">
+                <div class="step-title">Bước 2: Xác thực Email</div>
+                <p style="text-align: center; font-size: 13px; margin-bottom: 10px;">
+                    Mã OTP đã được gửi tới email của bạn.
+                </p>
+                <input type="text" id="reg-otp" placeholder="Nhập mã OTP (6 số)" required>
+                <button type="submit">Xác minh</button>
+            </form>
+
+            <form id="step-3-form" class="hidden">
+                <div class="step-title">Bước 3: Hoàn tất hồ sơ</div>
+                <input type="text" id="reg-nickname" placeholder="Tên hiển thị (Nickname)" required>
+                
+                <label style="display:block; margin-bottom: 5px; color: #555;">Chọn Avatar:</label>
+                <select id="reg-avatar" style="width: 100%; padding: 14px; margin-bottom: 15px; border-radius: 30px; border: 1px solid #ddd;">
+                    <option value="avatar1.png">👦 Nam</option>
+                    <option value="avatar2.png">👧 Nữ</option>
+                    <option value="avatar3.png">🤖 Robot</option>
+                    <option value="avatar4.png">🐶 Cún con</option>
+                </select>
+
+                <button type="submit">Hoàn tất Đăng Ký</button>
+            </form>
+
+            <p id="auth-message" class="message-display"></p>
+            
+            <p class="switch-form" id="login-link">
+                Đã có tài khoản? <a href="/index.html">Đăng nhập</a>
+            </p>
+        </div>
+    </div>
+
+    <script src="main.js"></script>
+</body>
+</html>
